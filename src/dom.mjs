@@ -27,17 +27,6 @@ const dom = {
             root.parentNode.insertBefore(el, predecessor);
             predecessor = lastRealElement.nextSibling;
         }
-    },
-    meta(name) {
-        const node = document.querySelector(`meta[name='${name}']`);
-        return node === null ? null : node.getAttribute("content");
-    },
-    context() {
-        return dom.meta("context") || "/";
-    },
-    lang(defaultValue) {
-        const r = document.documentElement.getAttribute("lang") || defaultValue || 'it';
-        return r.toLowerCase();
     }
 };
 

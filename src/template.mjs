@@ -17,15 +17,15 @@ function isExpressionNode(node) {
 class Template {
     evaluator;
     textNodeEvaluator;
-    node;
+    fragment;
     static fromHtml(html, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator});
+        return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator});
     }
     static fromNodes(nodes, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator});
+        return new Template({fragment: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator});
     }
     static fromNode(node, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator});
+        return new Template({fragment: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator});
     }
     static render(conf, ...data) {
         return new Template(conf).render(...data);
@@ -36,17 +36,17 @@ class Template {
     static appendTo(conf, el, ...data) {
         return new Template(conf).appendTo(el, ...data);
     }
-    constructor( {node, evaluator, textNodeEvaluator}) {
+    constructor( {fragment, evaluator, textNodeEvaluator}) {
         this.evaluator = evaluator;
         this.textNodeEvaluator = textNodeEvaluator;
-        this.node = node;
+        this.fragment = fragment;
     }
     withNode(node) {
         return Template.fromNode(node, this.evaluator, this.textNodeEvaluator);
     }
     render(...data) {
-        const root = this.node.cloneNode(true);
-        const iterator = document.createNodeIterator(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
+        const fragment = this.fragment.cloneNode(true);
+        const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
         const toBeRemoved = [];
         let node;
         while ((node = iterator.nextNode()) !== null) {
@@ -85,7 +85,7 @@ class Template {
                     });
         }
         toBeRemoved.forEach(el => el.remove());
-        return root;
+        return fragment;
     }
     renderTo(el, ...data) {
         const fragment = this.render(...data);
