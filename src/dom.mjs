@@ -23,8 +23,9 @@ const dom = {
         let predecessor = root.nextSibling;
         for (let i = 0; i !== els.length; ++i) {            
             const el = els[i];
+            const lastRealElement = (el instanceof DocumentFragment) ? el.lastChild : el;
             root.parentNode.insertBefore(el, predecessor);
-            predecessor = el.nextSibling;
+            predecessor = lastRealElement.nextSibling;
         }
     },
     meta(name) {
