@@ -55,19 +55,19 @@ class DefaultCommandsHandler {
     orderedCommands() {
         return DefaultCommandsHandler.COMMANDS;
     }
-    handletplIf(template, node, value, ops, ...data) {
+    tplIf(template, node, value, ops, ...data) {
         const accept = template.evaluator.evaluate(value, ...data);
         if (!accept) {
             ops.remove(node);
         }
     }
-    handletplWith(template, node, value, ops, ...data) {
+    tplWith(template, node, value, ops, ...data) {
         const evaluated = template.evaluator.evaluate(value, ...data);
         const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
         const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
         ops.replace(node, [newNode]);
     }
-    handletplEach(template, node, value, ops, ...data) {
+    tplEach(template, node, value, ops, ...data) {
         const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
         const evaluated = template.evaluator.evaluate(value, ...data);
         const nodes = evaluated.map(v => {
@@ -75,7 +75,7 @@ class DefaultCommandsHandler {
         });
         ops.replace(node, nodes);
     }
-    handletplRemove(template, node, value, ops, ...data) {
+    tplRemove(template, node, value, ops, ...data) {
         switch (value.toLowerCase()) {
             case 'tag':
                 ops.replace(node, node.childNodes);
@@ -88,16 +88,16 @@ class DefaultCommandsHandler {
                 break;
         }
     }
-    handletplText(template, node, value, ops, ...data) {
+    tplText(template, node, value, ops, ...data) {
         const text = template.evaluator.evaluate(value, ...data);
         node.innerHTML = "";
         node.textContent = text;
     }
-    handletplHtml(template, node, value, ops, ...data) {
+    tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
         node.innerHTML = html;
     }
-    handleTextNode(template, node, value, ops, ...data) {
+    textNode(template, node, value, ops, ...data) {
         const nodes = template.textNodeEvaluator.evaluate(value, ...data).map(v => {
             return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
         });
@@ -147,7 +147,7 @@ class Template {
         while ((node = iterator.nextNode()) !== null) {
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                this.commandsHandler.handleTextNode(this, node, node.nodeValue, ops, ...data);
+                this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
                 continue;
             }
             const commands = this.commandsHandler.orderedCommands();
@@ -157,7 +157,7 @@ class Template {
                     continue;
                 }
                 const value = ops.popData(node, command);
-                this.commandsHandler['handle'+command](this, node, value, ops, ...data);
+                this.commandsHandler[command](this, node, value, ops, ...data);
             }
             Object.keys(node.dataset)
                 .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))

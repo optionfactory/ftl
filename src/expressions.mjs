@@ -47,7 +47,6 @@ class EvaluatingVisitor {
     }
     //navto
     cond(node, from) {
-        console.log(node.ifFalse);
         return [from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse)];
     }
     dot(node, from) {
