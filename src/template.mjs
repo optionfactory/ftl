@@ -58,12 +58,12 @@ class Template {
     //attribute handling priority is defined in this block of code
     static DATA_PREFIX = 'tpl';
     static COMMANDS = [
-        { name: 'If', dataSetKey: 'tplIf', handler: Template.prototype.handleAttributeIf },
-        { name: 'With', dataSetKey: 'tplWith', handler: Template.prototype.handleAttributeWith },
-        { name: 'Each', dataSetKey: 'tplEach', handler: Template.prototype.handleAttributeEach },
-        { name: 'Text', dataSetKey: 'tplText', handler: Template.prototype.handleAttributeText },
-        { name: 'Html', dataSetKey: 'tplHtml', handler: Template.prototype.handleAttributeHtml },
-        { name: 'Remove', dataSetKey: 'tplRemove', handler: Template.prototype.handleAttributeRemove }
+        { name: 'If', dataSetKey: 'tplIf', handler: Template.prototype.handleCommandIf },
+        { name: 'With', dataSetKey: 'tplWith', handler: Template.prototype.handleCommandWith },
+        { name: 'Each', dataSetKey: 'tplEach', handler: Template.prototype.handleCommandEach },
+        { name: 'Text', dataSetKey: 'tplText', handler: Template.prototype.handleCommandText },
+        { name: 'Html', dataSetKey: 'tplHtml', handler: Template.prototype.handleCommandHtml },
+        { name: 'Remove', dataSetKey: 'tplRemove', handler: Template.prototype.handleCommandRemove }
     ];
     evaluator;
     textNodeEvaluator;
@@ -97,7 +97,6 @@ class Template {
     }
     render(...data) {
         const ops = new NodeOperations(Template.DATA_PREFIX);
-
         const fragment = this.fragment.cloneNode(true);
         const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
         let node;
@@ -136,19 +135,19 @@ class Template {
         const fragment = this.render(...data);
         el.appendChild(fragment);
     }
-    handleAttributeIf(node, value, ops, ...data) {
+    handleCommandIf(node, value, ops, ...data) {
         const accept = this.evaluator.evaluate(value, ...data);
         if (!accept) {
             ops.remove(node);
         }
     }
-    handleAttributeWith(node, value, ops, ...data) {
+    handleCommandWith(node, value, ops, ...data) {
         const evaluated = this.evaluator.evaluate(value, ...data);
         const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
         const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
         ops.replace(node, [newNode]);
     }
-    handleAttributeEach(node, value, ops, ...data) {
+    handleCommandEach(node, value, ops, ...data) {
         const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
         const evaluated = this.evaluator.evaluate(value, ...data);
         const nodes = evaluated.map(v => {
@@ -156,7 +155,7 @@ class Template {
         });
         ops.replace(node, nodes);
     }
-    handleAttributeRemove(node, value, ops, ...data) {
+    handleCommandRemove(node, value, ops, ...data) {
         switch (value.toLowerCase()) {
             case 'tag':
                 ops.replace(node, node.childNodes);
@@ -169,12 +168,12 @@ class Template {
                 break;
         }
     }
-    handleAttributeText(node, value, ops, ...data) {
+    handleCommandText(node, value, ops, ...data) {
         const text = this.evaluator.evaluate(value, ...data);
         node.innerHTML = "";
         node.textContent = text;
     }
-    handleAttributeHtml(node, value, ops, ...data) {
+    handleCommandHtml(node, value, ops, ...data) {
         const html = this.evaluator.evaluate(value, ...data);
         node.innerHTML = html;
     }
