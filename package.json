@@ -21,6 +21,7 @@
         "jsdom": "^20.0.0",
         "mocha": "^9.2.2",
         "peggy": "^2.0.1",
-        "rollup-plugin-terser": "7.0.2"
+        "rollup-plugin-terser": "7.0.2",
+	"terser": ">=5.14.2"
     }
 }
