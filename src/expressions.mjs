@@ -10,7 +10,7 @@ class EvaluatingVisitor {
         const fnRef = node.value;
         const module = fnRef.module.reduce((acc, m) => acc[m], this.functions);
         const args = node.args.map(arg => this.visit(arg));
-        return module[fnRef.value].call(this, args);
+        return module[fnRef.value].apply(this, args);
     }
     nav(node) {
         const from = this.visit(node.from);
@@ -66,7 +66,7 @@ class EvaluatingVisitor {
             return [];
         }
         const args = node.value.map(arg => this.visit(arg));
-        return [fn.call(scope, args)];
+        return [fn.apply(scope, args)];
     }
     //
     visit(node, ...args) {
