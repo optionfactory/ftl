@@ -2317,7 +2317,7 @@ class EvaluatingVisitor {
         const fnRef = node.value;
         const module = fnRef.module.reduce((acc, m) => acc[m], this.functions);
         const args = node.args.map(arg => this.visit(arg));
-        return module[fnRef.value].call(this, args);
+        return module[fnRef.value].apply(this, args);
     }
     nav(node) {
         const from = this.visit(node.from);
@@ -2346,9 +2346,6 @@ class EvaluatingVisitor {
         }
         return undefined;
     }
-    cond(node, from) {
-        return from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse);
-    }
     dict(node) {
         return node.value.map(entry => [entry[0].value, this.visit(entry[1])]);
     }
@@ -2356,6 +2353,9 @@ class EvaluatingVisitor {
         return node.value.map(v => this.visit(v));
     }
     //navto
+    cond(node, from) {
+        return [from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse)];
+    }
     dot(node, from) {
         if (node.ns && (from === null || from === undefined)) {
             return [];
@@ -2373,7 +2373,7 @@ class EvaluatingVisitor {
             return [];
         }
         const args = node.value.map(arg => this.visit(arg));
-        return [fn.call(scope, args)];
+        return [fn.apply(scope, args)];
     }
     //
     visit(node, ...args) {
@@ -2417,99 +2417,6 @@ class TextNodeExpressionEvaluator {
     }
 }
 
-function extract(extractors, el) {
-    const maybeExtractor = extractors[el.dataset['bindExtractor']] || extractors[el.dataset['bindProvide']];
-    if (maybeExtractor) {
-        return maybeExtractor(el);
-    }
-    if (el.getAttribute('type') === 'radio') {
-        if (!el.checked) {
-            return undefined;
-        }
-        return el.dataset['bindType'] === 'boolean' ? el.value === 'true' : el.value;
-    }
-    if (el.getAttribute('type') === 'checkbox') {
-        return el.checked;
-    }
-    if (el.dataset['bindType'] === 'boolean') {
-        return !el.value ? null : el.value === 'true';
-    }
-    return el.value || null;
-}
-
-function mutate(mutators, el, raw, key, values) {
-    const maybeMutator = mutators[el.dataset['bindMutator']] || mutators[el.dataset['bindProvide']];
-    if (maybeMutator) {
-        maybeMutator(el, raw, key, values);
-        return;
-    }
-    el.value = raw;
-}
-
-
-function providePath(result, path, value) {
-    const keys = path.split(".").map((k) => k.match(/^[0-9]+$/) ? +k : k);
-    let current = result;
-    let previous = null;
-    for (let i = 0; ; ++i) {
-        const ckey = keys[i];
-        const pkey = keys[i - 1];
-        if (Number.isInteger(ckey) && !Array.isArray(current)) {
-            if (previous !== null) {
-                previous[pkey] = current = [];
-            } else {
-                result = current = [];
-            }
-        }
-        if (i === keys.length - 1) {
-            //when value is undefined we only want to define the property if it's not defined 
-            current[ckey] = value !== undefined ? value : (current.hasOwnProperty(ckey) ? current[ckey] : null);
-            return result;
-        }
-        if (current[ckey] === undefined) {
-            current[ckey] = {};
-        }
-        previous = current;
-        current = current[ckey];
-    }
-}
-
-class Bindings {
-    extractors;
-    mutators;
-    valueHoldersSelector;
-    ignoredChildrenSelector;
-
-    constructor( {extractors, mutators, ignoredChildrenSelector, valueHoldersSelector}) {
-        this.extractors = extractors || {};
-        this.mutators = mutators || {};
-        this.valueHoldersSelector = valueHoldersSelector || 'input[name], select[name], textarea[name]';
-        this.ignoredChildrenSelector = ignoredChildrenSelector || '.hidden';
-    }
-    apply(el, values) {
-        for (let k in values) {
-            if (!values.hasOwnProperty(k)) {
-                continue;
-            }
-            const curEl = el.querySelector(`[name='${k}']`);
-            mutate(this.mutators, curEl, values[k], k, values);
-        }
-    }
-    values(el) {
-        return Array.from(el.querySelectorAll(this.valueHoldersSelector))
-                .filter((el) => {
-                    if (el.dataset['bindInclude'] === 'never') {
-                        return false;
-                    }
-                    const ignore = el.dataset['bindInclude'] !== 'always' && el.closest(this.ignoredChildrenSelector) !== null;
-                    return !ignore;
-                })
-                .reduce((result, el) => {
-                    return providePath(result, el.getAttribute('name'), extract(this.extractors, el));
-                }, {});
-    }
-}
-
 const dom = {
     fragmentFromNodes(cloneNodes, ...nodes){
         const fragment = new DocumentFragment();
@@ -2534,25 +2441,14 @@ const dom = {
         let predecessor = root.nextSibling;
         for (let i = 0; i !== els.length; ++i) {            
             const el = els[i];
+            const lastRealElement = (el instanceof DocumentFragment) ? el.lastChild : el;
             root.parentNode.insertBefore(el, predecessor);
-            predecessor = el.nextSibling;
+            predecessor = lastRealElement?.nextSibling;
         }
-    },
-    meta(name) {
-        const node = document.querySelector(`meta[name='${name}']`);
-        return node === null ? null : node.getAttribute("content");
-    },
-    context() {
-        return dom.meta("context") || "/";
-    },
-    lang(defaultValue) {
-        const r = document.documentElement.getAttribute("lang") || defaultValue || 'it';
-        return r.toLowerCase();
     }
 };
 
 /* global NodeFilter, Node, DocumentFragment */
-
 
 
 function isExpressionNode(node) {
@@ -2566,18 +2462,113 @@ function isExpressionNode(node) {
             : NodeFilter.FILTER_SKIP;
 }
 
+class NodeOperations {
+    constructor(prefix){
+        this.prefix = prefix;
+        this.forRemoval = [];
+    }
+    remove(node){
+        if('innerHTML' in node){
+            node.innerHTML = '';
+        }
+        if('dataset' in node){
+            Object.keys(node.dataset)
+                .filter(k => k.startsWith(this.prefix))
+                .forEach(k => delete node.dataset[k]);
+        }
+        this.forRemoval.push(node);
+    }
+    popData(node, key){
+        const v = node.dataset[key];
+        delete node.dataset[key];
+        return v;
+    }
+    replace(node, nodes){
+        dom.addSuccessors(node, nodes);
+        this.remove(node);
+    }
+    cleanup(){
+        while (this.forRemoval.length){
+             this.forRemoval.pop().remove();
+        }
+    }
+}
+
+class DefaultCommandsHandler {
+    static DATA_PREFIX = 'tpl';
+    static COMMANDS = ['tplIf','tplWith','tplEach','tplText','tplHtml','tplRemove'];
+
+    dataPrefix(){
+        return DefaultCommandsHandler.DATA_PREFIX;
+    }
+    orderedCommands() {
+        return DefaultCommandsHandler.COMMANDS;
+    }
+    tplIf(template, node, value, ops, ...data) {
+        const accept = template.evaluator.evaluate(value, ...data);
+        if (!accept) {
+            ops.remove(node);
+        }
+    }
+    tplWith(template, node, value, ops, ...data) {
+        const evaluated = template.evaluator.evaluate(value, ...data);
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
+        ops.replace(node, [newNode]);
+    }
+    tplEach(template, node, value, ops, ...data) {
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const evaluated = template.evaluator.evaluate(value, ...data);
+        const nodes = evaluated.map(v => {
+            return template.withNode(node).render(...data, varName ? {[varName]: v} : v);
+        });
+        ops.replace(node, nodes);
+    }
+    tplRemove(template, node, value, ops, ...data) {
+        switch (value.toLowerCase()) {
+            case 'tag':
+                ops.replace(node, node.childNodes);
+                break;
+            case 'body':
+                node.innerHTML = '';
+                break;
+            case 'all':
+                ops.remove(node);
+                break;
+        }
+    }
+    tplText(template, node, value, ops, ...data) {
+        const text = template.evaluator.evaluate(value, ...data);
+        node.innerHTML = "";
+        node.textContent = text;
+    }
+    tplHtml(template, node, value, ops, ...data) {
+        const html = template.evaluator.evaluate(value, ...data);
+        node.innerHTML = html;
+    }
+    textNode(template, node, value, ops, ...data) {
+        const nodes = template.textNodeEvaluator.evaluate(value, ...data).map(v => {
+            return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
+        });
+        ops.replace(node, nodes);
+    }
+}
+
+
 class Template {
+    fragment;
     evaluator;
     textNodeEvaluator;
-    node;
-    static fromHtml(html, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator});
+    commandsHandler;
+
+    static fromHtml(html, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator, commandsHandler});
     }
-    static fromNodes(nodes, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator});
+    static fromNodes(nodes, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator, commandsHandler});
     }
-    static fromNode(node, evaluator, textNodeEvaluator) {
-        return new Template({node: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator});
+    static fromNode(node, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator, commandsHandler});
     }
     static render(conf, ...data) {
         return new Template(conf).render(...data);
@@ -2588,56 +2579,46 @@ class Template {
     static appendTo(conf, el, ...data) {
         return new Template(conf).appendTo(el, ...data);
     }
-    constructor( {node, evaluator, textNodeEvaluator}) {
+    constructor( {fragment, evaluator, textNodeEvaluator, commandsHandler}) {
+        this.fragment = fragment;
         this.evaluator = evaluator;
         this.textNodeEvaluator = textNodeEvaluator;
-        this.node = node;
+        this.commandsHandler = commandsHandler || new DefaultCommandsHandler();
     }
     withNode(node) {
-        return Template.fromNode(node, this.evaluator, this.textNodeEvaluator);
+        return Template.fromNode(node, this.evaluator, this.textNodeEvaluator, this.commandsHandler);
     }
     render(...data) {
-        const root = this.node.cloneNode(true);
-        const iterator = document.createNodeIterator(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
-        const toBeRemoved = [];
+        const ops = new NodeOperations(this.commandsHandler.dataPrefix());
+        const fragment = this.fragment.cloneNode(true);
+        const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
         let node;
         while ((node = iterator.nextNode()) !== null) {
+            ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                this.handleTextNode(node, toBeRemoved, ...data);
+                this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
                 continue;
             }
-            //attribute handling priority is defined in this block of code
-            if (node.hasAttribute('data-tpl-if')) {
-                this.handleAttributeIf(node, toBeRemoved, ...data);
+            const commands = this.commandsHandler.orderedCommands();
+            for(let i=0; i != commands.length ;++i){
+                const command = commands[i];
+                if(!(command in node.dataset)){
+                    continue;
+                }
+                const value = ops.popData(node, command);
+                this.commandsHandler[command](this, node, value, ops, ...data);
             }
-            if (node.hasAttribute('data-tpl-with')) {
-                this.handleAttributeWith(node, toBeRemoved, ...data);
-            }
-            if (node.hasAttribute('data-tpl-each')) {
-                this.handleAttributeEach(node, toBeRemoved, ...data);
-            }
-            if (node.hasAttribute('data-tpl-text')) {
-                this.handleAttributeText(node, toBeRemoved, ...data);
-            }
-            if (node.hasAttribute('data-tpl-html')) {
-                this.handleAttributeHtml(node, toBeRemoved, ...data);
-            }
-            if (node.hasAttribute('data-tpl-remove')) {
-                this.handleAttributeRemove(node, toBeRemoved, ...data);
-            }
-            const prefix = "data-tpl-";
-            Array.from(node.attributes)
-                    .filter(({name}) => name.startsWith(prefix))
-                    .forEach(({name}) => {
-                        const key = name.substring(prefix.length);
-                        const expression = node.getAttribute(name);
-                        const evaluated = this.evaluator.evaluate(expression, ...data);
-                        node.setAttribute(key, evaluated);
-                        node.removeAttribute(name);
-                    });
+            Object.keys(node.dataset)
+                .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))
+                .map(k => [k, k.substring(this.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
+                .forEach(([dataSetKey, attributeName])=> {
+                    const expression = ops.popData(node, dataSetKey);
+                    const evaluated = this.evaluator.evaluate(expression, ...data);
+                    node.setAttribute(attributeName, evaluated);
+                });
         }
-        toBeRemoved.forEach(el => el.remove());
-        return root;
+        ops.cleanup();
+        return fragment;
     }
     renderTo(el, ...data) {
         const fragment = this.render(...data);
@@ -2648,154 +2629,8 @@ class Template {
         const fragment = this.render(...data);
         el.appendChild(fragment);
     }
-    handleAttributeIf(node, toBeRemoved, ...data) {
-        const accept = this.evaluator.evaluate(node.dataset['tplIf'], ...data);
-        node.removeAttribute('data-tpl-if');
-        if (!accept) {
-            node.innerHTML = '';
-            toBeRemoved.push(node);
-        }
-    }
-    handleAttributeWith(node, toBeRemoved, ...data) {
-        const value = this.evaluator.evaluate(node.dataset['tplWith'], ...data);
-        node.removeAttribute("data-tpl-with");
-        const varName = node.dataset['tplVar'];
-        node.removeAttribute("data-tpl-var");
-        const newNode = this.withNode(node).render(...data, varName ? {[varName]: value} : value);
-        node.innerHTML = '';
-        dom.addSuccessors(node, [newNode]);
-        toBeRemoved.push(node);
-    }
-    handleAttributeEach(node, toBeRemoved, ...data) {
-        const values = this.evaluator.evaluate(node.dataset['tplEach'], ...data);
-        node.removeAttribute("data-tpl-each");
-        const varName = node.dataset['tplVar'];
-        node.removeAttribute("data-tpl-var");
 
-        const nodes = values.map(value => {
-            return this.withNode(node).render(...data, varName ? {[varName]: value} : value);
-        });
-        node.innerHTML = '';
-        dom.addSuccessors(node, nodes);
-        toBeRemoved.push(node);
-    }
-    handleAttributeRemove(node, toBeRemoved, ...data) {
-        const command = node.dataset['tplRemove'].toLowerCase();
-        node.removeAttribute("data-tpl-remove");
-        switch (command) {
-            case 'tag':
-                dom.addSuccessors(node, node.childNodes);
-                toBeRemoved.push(node);
-                break;
-            case 'body':
-                node.innerHTML = '';
-                break;
-            case 'all':
-                toBeRemoved.push(node);
-                break;
-        }
-    }
-    handleAttributeText(node, toBeRemoved, ...data) {
-        const text = this.evaluator.evaluate(node.dataset['tplText'], ...data);
-        node.removeAttribute("data-tpl-text");
-        node.innerHTML = "";
-        node.textContent = text;
-    }
-    handleAttributeHtml(node, toBeRemoved, ...data) {
-        const html = this.evaluator.evaluate(node.dataset['tplHtml'], ...data);
-        node.removeAttribute("data-tpl-html");
-        node.innerHTML = html;
-    }
-    handleTextNode(node, toBeRemoved, ...data) {
-        const nodes = this.textNodeEvaluator.evaluate(node.nodeValue, ...data).map(v => {
-            return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
-        });
-        dom.addSuccessors(node, nodes);
-        toBeRemoved.push(node);
-    }
 }
 
-const timing = {
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    },
-    DEBOUNCE_DEFAULT: 0,
-    DEBOUNCE_IMMEDIATE: 1,
-    debounce(timeoutMs, func, options) {
-        let tid = null;
-        let args = [];
-        let previousTimestamp = 0;
-        let opts = options || timing.DEBOUNCE_DEFAULT;
-
-        const later = () => {
-            const elapsed = new Date().getTime() - previousTimestamp;
-            if (timeoutMs > elapsed) {
-                tid = setTimeout(later, timeoutMs - elapsed);
-                return;
-            }
-            tid = null;
-            if (opts !== timing.DEBOUNCE_IMMEDIATE) {
-                func(...args);
-            }
-            // This check is needed because `func` can recursively invoke `debounced`.
-            if (tid === null) {
-                args = [];
-            }
-        };
-
-        return function () {
-            args = arguments;
-            previousTimestamp = new Date().getTime();
-            if (tid === null) {
-                tid = setTimeout(later, timeoutMs);
-                if (opts === timing.DEBOUNCE_IMMEDIATE) {
-                    func(...args);
-                }
-            }
-        };
-    },
-    THROTTLE_DEFAULT: 0,
-    THROTTLE_NO_LEADING: 1,
-    THROTTLE_NO_TRAILING: 2,
-    throttle(timeoutMs, func, options) {
-        let tid = null;
-        let args = [];
-        let previousTimestamp = 0;
-        let opts = options || timing.THROTTLE_DEFAULT;
-
-        const later = () => {
-            previousTimestamp = (opts & timing.THROTTLE_NO_LEADING) ? 0 : new Date().getTime();
-            tid = null;
-            func(...args);
-            if (tid === null) {
-                args = [];
-            }
-        };
-
-        return function () {
-            const now = new Date().getTime();
-            if (!previousTimestamp && (opts & timing.THROTTLE_NO_LEADING)) {
-                previousTimestamp = now;
-            }
-            const remaining = timeoutMs - (now - previousTimestamp);
-            args = arguments;
-            if (remaining <= 0 || remaining > timeoutMs) {
-                if (tid !== null) {
-                    clearTimeout(tid);
-                    tid = null;
-                }
-                previousTimestamp = now;
-                func(...args);
-                if (tid === null) {
-                    args = [];
-                }
-            } else if (tid === null && !(opts & timing.THROTTLE_NO_TRAILING)) {
-                tid = setTimeout(later, remaining);
-            }
-        };
-
-    }
-};
-
-export { Bindings, ExpressionEvaluator, Template, TextNodeExpressionEvaluator, dom, timing };
+export { DefaultCommandsHandler, ExpressionEvaluator, Template, TextNodeExpressionEvaluator };
 //# sourceMappingURL=ftl.mjs.map
