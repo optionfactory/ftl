@@ -23,8 +23,16 @@
                 <p data-tpl-if="delivered">Your package has been delivered</p>
                 <hr>
                 <h2>With</h2>
-                <div data-tpl-with="parent.nested"><p>{{text}}</p></div>                
-                <div data-tpl-with="parent.nested" data-tpl-var="nested"><p>{{nested.text}}</p></div>
+                <div data-tpl-with="parent.nested">
+                    <p>{{text}}</p>
+                </div>                
+                <div data-tpl-with="parent.nested" data-tpl-var="nested">
+                    <p>{{nested.text}}</p>
+                    <div>
+                        <h3>fruits</h3>
+                        <p data-tpl-each="nested.fruits">{{nested.label}}: {{self}}</p>
+                    </div>
+                </div>
                 <hr>
                 <h2>Text</h2>
                 <p data-tpl-text="beautifulText"></p>
@@ -42,12 +50,32 @@
                 <hr>
                 <h2>Custom</h2>
                 <p data-tpl-style="#text:concat(' ','color:', color)">To be colored</p>
+                <hr>
+                <h1>Expression evaluation</h1>
+                <h2>Object navigation</h2>
+                <p data-tpl-text="parent.nested.text"></p>
+                <hr>
+                <h2>Nullsafe navigation</h2>
+                <p data-tpl-text="parent.empty?.text"></p>
+                <hr>
+                <h2>Method call</h2>
+                <p data-tpl-text="parent.nested.fruits.join(', ')"></p>
+                <hr>
+                <h2>Self</h2>
+                <p data-tpl-each="parent.nested.fruits">{{self}}</p>
+                <hr>
+                <h2>Function call</h2>
+                <p data-tpl-text="#math:sum(1, 5, 3, 65)"></p>
+
             </main>
         </template>
         <script>
             let functions = {
                 text: {
                     concat: (separator, ...txt) => txt.join(separator)
+                },
+                math: {
+                    sum: (...addends) => addends.reduce((a,b) => a + b, 0)
                 }
             };
 
@@ -56,7 +84,12 @@
                 delivered: false,
                 parent: {
                     text: "I'm the parent obj",
-                    nested: {text: "I'm the nested obj"}
+                    nested: {
+                        text: "I'm the nested obj",
+                        label: "fruit",
+                        fruits: ["apple", "banana", "tomato"]
+                    },
+                    empty: null
                 },
                 beautifulText: "I'm so <i>pretty!</i>",
                 color: "green"

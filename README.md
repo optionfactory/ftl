@@ -70,7 +70,11 @@ Sets the context of the fragment to the specified value
 data = {
     parent: {
         text: "I'm the parent obj",
-        nested: {text: "I'm the nested obj"}
+        nested: {
+            text: "I'm the nested obj",
+            label: "fruit",
+            fruits: ["apple", "banana", "tomato"]
+        }
     }
 }
 ```
@@ -82,9 +86,25 @@ renders to
 ```html
 <div><p>I'm the nested obj</p></div>
 ```
-It is also possible to name the new context with `data-tpl-var`
+It is also possible to assing the evaluated valua to a variable using `data-tpl-var`. This is useful for referencing it from another context.
 ```html
-<div data-tpl-with="parent.nested" data-tpl-var="nested"><p>{{nested.text}}</p></div>
+<div data-tpl-with="parent.nested" data-tpl-var="nested">
+    <p>{{nested.text}}</p>
+    <div>
+        <h3>fruits</h3>
+        <p data-tpl-each="nested.fruits">{{nested.label}}: {{self}}</p>
+    </div>
+</div>
+```
+that will render to
+```html
+<div>
+    <p>I'm the nested obj</p>
+    <div>
+        <h3>fruits</h3>
+        <p>fruit: apple</p><p>fruit: banana</p><p>fruit: tomato</p>
+    </div>
+</div>
 ```
 
 ### data-tpl-each
@@ -181,5 +201,89 @@ renders to
 ```
 
 ## Expression evaluation
+### Object navigation
+```javascript
+data = {
+    parent: {
+        nested: {text: "I'm the nested obj"}
+    }
+}
+```
+```html
+<p data-tpl-text="parent.nested.text"></p>
+```
+renders to
+```html
+<p>I'm the nested obj</p>
+```
+### Nullsafe navigation
+```javascript
+data = {
+    parent: {
+        empty: null
+    }
+}
+```
+```html
+<p data-tpl-text="parent.empty?.text"></p>
+```
+renders to
+```html
+<p></p>
+```
+### Call a method
+```javascript
+data = {
+    parent: {
+        nested: {
+            fruits: ["apple", "banana", "tomato"]
+        }
+    }
+}
+```
+```html
+<p data-tpl-text="parent.nested.fruits.join(', ')"></p>
+```
+renders to
+```html
+<p>apple, banana, tomato</p>
+```
 
-TODO
+### Evaluate self
+The keyword `self` refers to the current context
+
+```javascript
+data = {
+    parent: {
+        nested: {
+            fruits: ["apple", "banana", "tomato"]
+        }
+    }
+}
+```
+```html
+<p data-tpl-each="parent.nested.fruits">{{self}}</p>
+```
+renders to
+```html
+<p>apple</p><p>banana</p><p>tomato</p>
+```
+
+### Define and call a function
+Call custom defined functions
+
+```javascript
+functions = {
+    math: {
+        sum: (...addends) => addends.reduce((a,b) => a + b, 0)
+    }
+}
+```
+```html
+<p data-tpl-text="#math:sum(1, 5, 3, 65)"></p>
+```
+renders to
+```html
+<p>74</p>
+```
+

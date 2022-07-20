@@ -7,7 +7,7 @@
     ],
     "license": "MIT",
     "author": "rferranti",
-    "contributors": [],
+    "contributors": ["Petro36", "shun17"],
     "main": "index.mjs",
     "scripts": {
         "clean": "rimraf dist && npm prune",
