@@ -39,9 +39,6 @@ class EvaluatingVisitor {
         }
         return undefined;
     }
-    cond(node, from) {
-        return from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse);
-    }
     dict(node) {
         return node.value.map(entry => [entry[0].value, this.visit(entry[1])]);
     }
@@ -49,6 +46,10 @@ class EvaluatingVisitor {
         return node.value.map(v => this.visit(v));
     }
     //navto
+    cond(node, from) {
+        console.log(node.ifFalse);
+        return [from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse)];
+    }
     dot(node, from) {
         if (node.ns && (from === null || from === undefined)) {
             return [];

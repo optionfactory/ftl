@@ -18,6 +18,11 @@ describe('Expression', () => {
         let result = evaluator.evaluate("a.b.c.toLowerCase()", {a: {b: {c: "M"}}});
         assert.strictEqual(result, "m");
     });
+    it('can evaluate a ternary operator', () => {
+        let evaluator = new ExpressionEvaluator();
+        let result = evaluator.evaluate("a ? b : c", {a: false, b: "B_VALUE", c: "C_VALUE"});
+        assert.strictEqual(result, 'C_VALUE');
+    });        
     it('can evaluate a boolean literal (true)', () => {
         let evaluator = new ExpressionEvaluator();
         let result = evaluator.evaluate("true", {});
