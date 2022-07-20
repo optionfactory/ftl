@@ -32,7 +32,7 @@ const tnee = new ftl.TextNodeExpressionEvaluator(ee);
 const data = {title: 'Hello World!'};
 const myTpl = document.querySelector('#my-template');
 ftl.Template
-    .fromNode(myTpl, ee, tnee)
+    .fromNode(myTpl.content, ee, tnee)
     .renderTo(document.querySelector('#target'), data);
 ```
 
