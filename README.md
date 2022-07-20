@@ -231,6 +231,39 @@ renders to
 ```html
 <p></p>
 ```
+### Bracket notation navigation
+```javascript
+data = {
+    today: "tue",
+    carToPick: {
+        mon: "Ferrari",
+        tue: "Lambo",
+        wed: "Porsche"
+    }
+}
+```
+```html
+<p data-tpl-text="carToPick[today]"></p>
+```
+renders to
+```html
+<p>Lambo</p>
+```
+### Ternary operator
+```javascript
+data = {
+    amIRich: false,
+    richCar: "Maserati",
+    poorCar: "Mazda"
+}
+```
+```html
+<p data-tpl-text="amIRich ? richCar : poorCar"></p>
+```
+renders to
+```html
+<p>Mazda</p>
+```
 ### Call a method
 ```javascript
 data = {

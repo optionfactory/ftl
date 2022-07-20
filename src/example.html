@@ -58,6 +58,12 @@
                 <h2>Nullsafe navigation</h2>
                 <p data-tpl-text="parent.empty?.text"></p>
                 <hr>
+                <h2>Navigation with bracket notation</h2>
+                <p data-tpl-text="carToPick[today]"></p>
+                <hr>
+                <h2>Ternary operator</h2>
+                <p data-tpl-text="amIRich ? richCar : poorCar"></p>
+                <hr>
                 <h2>Method call</h2>
                 <p data-tpl-text="parent.nested.fruits.join(', ')"></p>
                 <hr>
@@ -82,6 +88,12 @@
             let data = {
                 a: [{v: 1}, {v: 2}, {v: 3}],
                 delivered: false,
+                today: "tue",
+                carToPick: {
+                    mon: "Ferrari",
+                    tue: "Lambo",
+                    wed: "Porsche"
+                },
                 parent: {
                     text: "I'm the parent obj",
                     nested: {
@@ -92,7 +104,10 @@
                     empty: null
                 },
                 beautifulText: "I'm so <i>pretty!</i>",
-                color: "green"
+                color: "green",
+                amIRich: false,
+                richCar: "Maserati",
+                poorCar: "Mazda"
             };
             let ee = new ftl.ExpressionEvaluator(functions);
             let tne = new ftl.TextNodeExpressionEvaluator(ee);
