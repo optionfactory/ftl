@@ -2,6 +2,13 @@
 import { dom } from "./dom.mjs";
 
 
+function camelToDash(v){
+    return v.split(/(?=[A-Z])/).join('-').toLowerCase();
+}
+
+function dashToCamel(v){
+    return v.replace(/-([a-z])/g, i => i[1].toUpperCase());
+}
 
 function isExpressionNode(node) {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -15,21 +22,29 @@ function isExpressionNode(node) {
 }
 
 class NodeOperations {
-    constructor(){
+    constructor(prefix){
+        this.prefix = prefix;
         this.forRemoval = [];
     }
     remove(node){
-        if(node.attributes){
+        if('innerHTML' in node){
             node.innerHTML = '';
-            while (node.attributes.length > 0) {
-                node.removeAttribute(node.attributes[0].name);
-            }
+        }
+        if('dataset' in node){
+            Object.keys(node.dataset)
+                .filter(k => k.startsWith(this.prefix))
+                .forEach(k => delete node.dataset[k]);
         }
         this.forRemoval.push(node);
     }
+    popData(node, key){
+        const v = node.dataset[key];
+        delete node.dataset[key];
+        return v;
+    }
     replace(node, nodes){
-        this.forRemoval.push(node);
         dom.addSuccessors(node, nodes);
+        this.remove(node);
     }
     cleanup(){
         while (this.forRemoval.length){
@@ -40,9 +55,20 @@ class NodeOperations {
 
 
 class Template {
+    //attribute handling priority is defined in this block of code
+    static DATA_PREFIX = 'tpl';
+    static COMMANDS = [
+        { name: 'If', dataSetKey: 'tplIf', handler: Template.prototype.handleAttributeIf },
+        { name: 'With', dataSetKey: 'tplWith', handler: Template.prototype.handleAttributeWith },
+        { name: 'Each', dataSetKey: 'tplEach', handler: Template.prototype.handleAttributeEach },
+        { name: 'Text', dataSetKey: 'tplText', handler: Template.prototype.handleAttributeText },
+        { name: 'Html', dataSetKey: 'tplHtml', handler: Template.prototype.handleAttributeHtml },
+        { name: 'Remove', dataSetKey: 'tplRemove', handler: Template.prototype.handleAttributeRemove }
+    ];
     evaluator;
     textNodeEvaluator;
     fragment;
+    
     static fromHtml(html, evaluator, textNodeEvaluator) {
         return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator});
     }
@@ -70,45 +96,33 @@ class Template {
         return Template.fromNode(node, this.evaluator, this.textNodeEvaluator);
     }
     render(...data) {
-        const ops = new NodeOperations();
+        const ops = new NodeOperations(Template.DATA_PREFIX);
+
         const fragment = this.fragment.cloneNode(true);
         const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
         let node;
         while ((node = iterator.nextNode()) !== null) {
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                this.handleTextNode(node, ops, ...data);
+                this.handleTextNode(node, node.nodeValue, ops, ...data);
                 continue;
             }
-            //attribute handling priority is defined in this block of code
-            if (node.hasAttribute('data-tpl-if')) {
-                this.handleAttributeIf(node, ops, ...data);
+            for(let i=0; i != Template.COMMANDS.length ;++i){
+                const command = Template.COMMANDS[i];
+                if(!(command.dataSetKey in node.dataset)){
+                    continue;
+                }
+                const value = ops.popData(node, command.dataSetKey);
+                const hr = command.handler.call(this, node, value, ops, ...data);
             }
-            if (node.hasAttribute('data-tpl-with')) {
-                this.handleAttributeWith(node, ops, ...data);
-            }
-            if (node.hasAttribute('data-tpl-each')) {
-                this.handleAttributeEach(node, ops, ...data);
-            }
-            if (node.hasAttribute('data-tpl-text')) {
-                this.handleAttributeText(node, ops, ...data);
-            }
-            if (node.hasAttribute('data-tpl-html')) {
-                this.handleAttributeHtml(node, ops, ...data);
-            }
-            if (node.hasAttribute('data-tpl-remove')) {
-                this.handleAttributeRemove(node, ops, ...data);
-            }
-            const prefix = "data-tpl-";
-            Array.from(node.attributes)
-                    .filter(({name}) => name.startsWith(prefix))
-                    .forEach(({name}) => {
-                        const key = name.substring(prefix.length);
-                        const expression = node.getAttribute(name);
-                        const evaluated = this.evaluator.evaluate(expression, ...data);
-                        node.setAttribute(key, evaluated);
-                        node.removeAttribute(name);
-                    });
+            Object.keys(node.dataset)
+                .filter(k => k.startsWith(Template.DATA_PREFIX))
+                .forEach(k => {
+                    const expression = ops.popData(node, k);
+                    const evaluated = this.evaluator.evaluate(expression, ...data);
+                    const attributeName = camelToDash(k.substring(Template.DATA_PREFIX.length));
+                    node.setAttribute(attributeName, evaluated);
+                });
         }
         ops.cleanup();
         return fragment;
@@ -122,39 +136,28 @@ class Template {
         const fragment = this.render(...data);
         el.appendChild(fragment);
     }
-    handleAttributeIf(node, ops, ...data) {
-        const accept = this.evaluator.evaluate(node.dataset['tplIf'], ...data);
-        node.removeAttribute('data-tpl-if');
+    handleAttributeIf(node, value, ops, ...data) {
+        const accept = this.evaluator.evaluate(value, ...data);
         if (!accept) {
-            node.innerHTML = '';
             ops.remove(node);
         }
     }
-    handleAttributeWith(node, ops, ...data) {
-        const value = this.evaluator.evaluate(node.dataset['tplWith'], ...data);
-        node.removeAttribute("data-tpl-with");
-        const varName = node.dataset['tplVar'];
-        node.removeAttribute("data-tpl-var");
-        const newNode = this.withNode(node).render(...data, varName ? {[varName]: value} : value);
-        node.innerHTML = '';
+    handleAttributeWith(node, value, ops, ...data) {
+        const evaluated = this.evaluator.evaluate(value, ...data);
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
         ops.replace(node, [newNode]);
     }
-    handleAttributeEach(node, ops, ...data) {
-        const values = this.evaluator.evaluate(node.dataset['tplEach'], ...data);
-        node.removeAttribute("data-tpl-each");
-        const varName = node.dataset['tplVar'];
-        node.removeAttribute("data-tpl-var");
-
-        const nodes = values.map(value => {
-            return this.withNode(node).render(...data, varName ? {[varName]: value} : value);
+    handleAttributeEach(node, value, ops, ...data) {
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const evaluated = this.evaluator.evaluate(value, ...data);
+        const nodes = evaluated.map(v => {
+            return this.withNode(node).render(...data, varName ? {[varName]: v} : v);
         });
-        node.innerHTML = '';
         ops.replace(node, nodes);
     }
-    handleAttributeRemove(node, ops, ...data) {
-        const command = node.dataset['tplRemove'].toLowerCase();
-        node.removeAttribute("data-tpl-remove");
-        switch (command) {
+    handleAttributeRemove(node, value, ops, ...data) {
+        switch (value.toLowerCase()) {
             case 'tag':
                 ops.replace(node, node.childNodes);
                 break;
@@ -166,19 +169,17 @@ class Template {
                 break;
         }
     }
-    handleAttributeText(node, ops, ...data) {
-        const text = this.evaluator.evaluate(node.dataset['tplText'], ...data);
-        node.removeAttribute("data-tpl-text");
+    handleAttributeText(node, value, ops, ...data) {
+        const text = this.evaluator.evaluate(value, ...data);
         node.innerHTML = "";
         node.textContent = text;
     }
-    handleAttributeHtml(node, ops, ...data) {
-        const html = this.evaluator.evaluate(node.dataset['tplHtml'], ...data);
-        node.removeAttribute("data-tpl-html");
+    handleAttributeHtml(node, value, ops, ...data) {
+        const html = this.evaluator.evaluate(value, ...data);
         node.innerHTML = html;
     }
-    handleTextNode(node, ops, ...data) {
-        const nodes = this.textNodeEvaluator.evaluate(node.nodeValue, ...data).map(v => {
+    handleTextNode(node, value, ops, ...data) {
+        const nodes = this.textNodeEvaluator.evaluate(value, ...data).map(v => {
             return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
         });
         ops.replace(node, nodes);
