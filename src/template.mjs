@@ -2,14 +2,6 @@
 import { dom } from "./dom.mjs";
 
 
-function camelToDash(v){
-    return v.split(/(?=[A-Z])/).join('-').toLowerCase();
-}
-
-function dashToCamel(v){
-    return v.replace(/-([a-z])/g, i => i[1].toUpperCase());
-}
-
 function isExpressionNode(node) {
     if (node.nodeType === Node.TEXT_NODE) {
         return node.nodeValue.indexOf("{{") !== -1 && node.nodeValue.indexOf("}}") !== -1
@@ -53,30 +45,81 @@ class NodeOperations {
     }
 }
 
+class DefaultCommandsHandler {
+    static DATA_PREFIX = 'tpl';
+    static COMMANDS = ['tplIf','tplWith','tplEach','tplText','tplHtml','tplRemove'];
+
+    dataPrefix(){
+        return DefaultCommandsHandler.DATA_PREFIX;
+    }
+    orderedCommands() {
+        return DefaultCommandsHandler.COMMANDS;
+    }
+    handletplIf(template, node, value, ops, ...data) {
+        const accept = template.evaluator.evaluate(value, ...data);
+        if (!accept) {
+            ops.remove(node);
+        }
+    }
+    handletplWith(template, node, value, ops, ...data) {
+        const evaluated = template.evaluator.evaluate(value, ...data);
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
+        ops.replace(node, [newNode]);
+    }
+    handletplEach(template, node, value, ops, ...data) {
+        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
+        const evaluated = template.evaluator.evaluate(value, ...data);
+        const nodes = evaluated.map(v => {
+            return template.withNode(node).render(...data, varName ? {[varName]: v} : v);
+        });
+        ops.replace(node, nodes);
+    }
+    handletplRemove(template, node, value, ops, ...data) {
+        switch (value.toLowerCase()) {
+            case 'tag':
+                ops.replace(node, node.childNodes);
+                break;
+            case 'body':
+                node.innerHTML = '';
+                break;
+            case 'all':
+                ops.remove(node);
+                break;
+        }
+    }
+    handletplText(template, node, value, ops, ...data) {
+        const text = template.evaluator.evaluate(value, ...data);
+        node.innerHTML = "";
+        node.textContent = text;
+    }
+    handletplHtml(template, node, value, ops, ...data) {
+        const html = template.evaluator.evaluate(value, ...data);
+        node.innerHTML = html;
+    }
+    handleTextNode(template, node, value, ops, ...data) {
+        const nodes = template.textNodeEvaluator.evaluate(value, ...data).map(v => {
+            return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
+        });
+        ops.replace(node, nodes);
+    }
+}
+
 
 class Template {
-    //attribute handling priority is defined in this block of code
-    static DATA_PREFIX = 'tpl';
-    static COMMANDS = [
-        { name: 'If', dataSetKey: 'tplIf', handler: Template.prototype.handleCommandIf },
-        { name: 'With', dataSetKey: 'tplWith', handler: Template.prototype.handleCommandWith },
-        { name: 'Each', dataSetKey: 'tplEach', handler: Template.prototype.handleCommandEach },
-        { name: 'Text', dataSetKey: 'tplText', handler: Template.prototype.handleCommandText },
-        { name: 'Html', dataSetKey: 'tplHtml', handler: Template.prototype.handleCommandHtml },
-        { name: 'Remove', dataSetKey: 'tplRemove', handler: Template.prototype.handleCommandRemove }
-    ];
+    fragment;
     evaluator;
     textNodeEvaluator;
-    fragment;
-    
-    static fromHtml(html, evaluator, textNodeEvaluator) {
-        return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator});
+    commandsHandler;
+
+    static fromHtml(html, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator, commandsHandler});
     }
-    static fromNodes(nodes, evaluator, textNodeEvaluator) {
-        return new Template({fragment: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator});
+    static fromNodes(nodes, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator, commandsHandler});
     }
-    static fromNode(node, evaluator, textNodeEvaluator) {
-        return new Template({fragment: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator});
+    static fromNode(node, evaluator, textNodeEvaluator, commandsHandler) {
+        return new Template({fragment: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator, commandsHandler});
     }
     static render(conf, ...data) {
         return new Template(conf).render(...data);
@@ -87,39 +130,41 @@ class Template {
     static appendTo(conf, el, ...data) {
         return new Template(conf).appendTo(el, ...data);
     }
-    constructor( {fragment, evaluator, textNodeEvaluator}) {
+    constructor( {fragment, evaluator, textNodeEvaluator, commandsHandler}) {
+        this.fragment = fragment;
         this.evaluator = evaluator;
         this.textNodeEvaluator = textNodeEvaluator;
-        this.fragment = fragment;
+        this.commandsHandler = commandsHandler || new DefaultCommandsHandler();
     }
     withNode(node) {
-        return Template.fromNode(node, this.evaluator, this.textNodeEvaluator);
+        return Template.fromNode(node, this.evaluator, this.textNodeEvaluator, this.commandsHandler);
     }
     render(...data) {
-        const ops = new NodeOperations(Template.DATA_PREFIX);
+        const ops = new NodeOperations(this.commandsHandler.dataPrefix());
         const fragment = this.fragment.cloneNode(true);
         const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, isExpressionNode);
         let node;
         while ((node = iterator.nextNode()) !== null) {
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                this.handleTextNode(node, node.nodeValue, ops, ...data);
+                this.commandsHandler.handleTextNode(this, node, node.nodeValue, ops, ...data);
                 continue;
             }
-            for(let i=0; i != Template.COMMANDS.length ;++i){
-                const command = Template.COMMANDS[i];
-                if(!(command.dataSetKey in node.dataset)){
+            const commands = this.commandsHandler.orderedCommands();
+            for(let i=0; i != commands.length ;++i){
+                const command = commands[i];
+                if(!(command in node.dataset)){
                     continue;
                 }
-                const value = ops.popData(node, command.dataSetKey);
-                const hr = command.handler.call(this, node, value, ops, ...data);
+                const value = ops.popData(node, command);
+                this.commandsHandler['handle'+command](this, node, value, ops, ...data);
             }
             Object.keys(node.dataset)
-                .filter(k => k.startsWith(Template.DATA_PREFIX))
-                .forEach(k => {
-                    const expression = ops.popData(node, k);
+                .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))
+                .map(k => [k, k.substring(this.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
+                .forEach(([dataSetKey, attributeName])=> {
+                    const expression = ops.popData(node, dataSetKey);
                     const evaluated = this.evaluator.evaluate(expression, ...data);
-                    const attributeName = camelToDash(k.substring(Template.DATA_PREFIX.length));
                     node.setAttribute(attributeName, evaluated);
                 });
         }
@@ -135,54 +180,10 @@ class Template {
         const fragment = this.render(...data);
         el.appendChild(fragment);
     }
-    handleCommandIf(node, value, ops, ...data) {
-        const accept = this.evaluator.evaluate(value, ...data);
-        if (!accept) {
-            ops.remove(node);
-        }
-    }
-    handleCommandWith(node, value, ops, ...data) {
-        const evaluated = this.evaluator.evaluate(value, ...data);
-        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
-        const newNode = this.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
-        ops.replace(node, [newNode]);
-    }
-    handleCommandEach(node, value, ops, ...data) {
-        const varName = ops.popData(node, Template.DATA_PREFIX + 'Var');
-        const evaluated = this.evaluator.evaluate(value, ...data);
-        const nodes = evaluated.map(v => {
-            return this.withNode(node).render(...data, varName ? {[varName]: v} : v);
-        });
-        ops.replace(node, nodes);
-    }
-    handleCommandRemove(node, value, ops, ...data) {
-        switch (value.toLowerCase()) {
-            case 'tag':
-                ops.replace(node, node.childNodes);
-                break;
-            case 'body':
-                node.innerHTML = '';
-                break;
-            case 'all':
-                ops.remove(node);
-                break;
-        }
-    }
-    handleCommandText(node, value, ops, ...data) {
-        const text = this.evaluator.evaluate(value, ...data);
-        node.innerHTML = "";
-        node.textContent = text;
-    }
-    handleCommandHtml(node, value, ops, ...data) {
-        const html = this.evaluator.evaluate(value, ...data);
-        node.innerHTML = html;
-    }
-    handleTextNode(node, value, ops, ...data) {
-        const nodes = this.textNodeEvaluator.evaluate(value, ...data).map(v => {
-            return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
-        });
-        ops.replace(node, nodes);
-    }
+
 }
 
-export { Template };
+export { 
+    Template,
+    DefaultCommandsHandler
+};
