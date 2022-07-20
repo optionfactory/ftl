@@ -5,25 +5,63 @@
     </head>
     <body>
 
-
         <div data-ref="target">
             target
-
         </div>
-
 
         <template data-ref="template">
             <h1>title</h1>
             <main data-ref="asd">
                 <h2>text</h2>
                 <div>{{ a['0'].v }}</div>
+                <hr>
                 <h2>each</h2>
                 <div data-tpl-each="a">{{ v }}</div>
+                <hr>
+                <h2>If</h2>
+                <h3>Tracking:</h3>
+                <p data-tpl-if="delivered">Your package has been delivered</p>
+                <hr>
+                <h2>With</h2>
+                <div data-tpl-with="parent.nested"><p>{{text}}</p></div>                
+                <div data-tpl-with="parent.nested" data-tpl-var="nested"><p>{{nested.text}}</p></div>
+                <hr>
+                <h2>Text</h2>
+                <p data-tpl-text="beautifulText"></p>
+                <hr>
+                <h2>Html</h2>
+                <p data-tpl-html="beautifulText"></p>
+                <hr>
+                <h2>Remove</h2>
+                <h3>tag</h3>
+                <div data-tpl-remove="tag"><p>paragraph</p></div>
+                <h3>body</h3>
+                <div data-tpl-remove="body"><p>paragraph</p></div>
+                <h3>all</h3>
+                <div data-tpl-remove="all"><p>paragraph</p></div>
+                <hr>
+                <h2>Custom</h2>
+                <p data-tpl-style="#text:concat(' ','color:', color)">To be colored</p>
             </main>
         </template>
         <script>
-            let data = {a: [{v: 1}, {v: 2}]};
-            let ee = new ftl.ExpressionEvaluator();
+            let functions = {
+                text: {
+                    concat: (separator, ...txt) => txt.join(separator)
+                }
+            };
+
+            let data = {
+                a: [{v: 1}, {v: 2}, {v: 3}],
+                delivered: false,
+                parent: {
+                    text: "I'm the parent obj",
+                    nested: {text: "I'm the nested obj"}
+                },
+                beautifulText: "I'm so <i>pretty!</i>",
+                color: "green"
+            };
+            let ee = new ftl.ExpressionEvaluator(functions);
             let tne = new ftl.TextNodeExpressionEvaluator(ee);
             let template = ftl.Template.fromNode(document.querySelector("[data-ref=template]").content, ee, tne);
             
