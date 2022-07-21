@@ -1,9 +1,9 @@
 import { ExpressionEvaluator , TextNodeExpressionEvaluator } from "./expressions.mjs";
-import { Template, DefaultCommandsHandler } from './template.mjs'
+import { Template, TplCommandsHandler } from './template.mjs'
 
 export {  
     TextNodeExpressionEvaluator,    
     ExpressionEvaluator,
     Template,
-    DefaultCommandsHandler
+    TplCommandsHandler
 };

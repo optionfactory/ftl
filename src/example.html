@@ -26,11 +26,11 @@
                 <div data-tpl-with="parent.nested">
                     <p>{{text}}</p>
                 </div>                
-                <div data-tpl-with="parent.nested" data-tpl-var="nested">
-                    <p>{{nested.text}}</p>
+                <div data-tpl-with="parent.nested" data-tpl-var="n">
+                    <p>{{n.text}}</p>
                     <div>
                         <h3>fruits</h3>
-                        <p data-tpl-each="nested.fruits">{{nested.label}}: {{self}}</p>
+                        <p data-tpl-each="n.fruits">{{n.label}}: {{self}}</p>
                     </div>
                 </div>
                 <hr>

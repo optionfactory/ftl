@@ -1,8 +1,9 @@
+/* global DocumentFragment */
 
 const dom = {
-    fragmentFromNodes(cloneNodes, ...nodes){
+    fragmentFromNodes(cloneNodes, ...nodes) {
         const fragment = new DocumentFragment();
-        for(let i=0; i !== nodes.length ;++i){
+        for (let i = 0; i !== nodes.length; ++i) {
             const child = nodes[i];
             fragment.appendChild(cloneNodes ? child.cloneNode(true) : child);
         }
@@ -18,10 +19,10 @@ const dom = {
         r.appendChild(dom.fragmentFromNodes(true, ...nodes));
         return r.innerHTML;
     },
-    addSuccessors(root, successors){
+    addSuccessors(root, successors) {
         const els = Array.from(successors);
         let predecessor = root.nextSibling;
-        for (let i = 0; i !== els.length; ++i) {            
+        for (let i = 0; i !== els.length; ++i) {
             const el = els[i];
             const lastRealElement = (el instanceof DocumentFragment) ? el.lastChild : el;
             root.parentNode.insertBefore(el, predecessor);
