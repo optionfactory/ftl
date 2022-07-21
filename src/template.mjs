@@ -133,10 +133,14 @@ class Template {
         return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator, commandsHandler});
     }
     static fromNodes(nodes, evaluator, textNodeEvaluator, commandsHandler) {
-        return new Template({fragment: dom.fragmentFromNodes(true, ...nodes), evaluator, textNodeEvaluator, commandsHandler});
+        return new Template({fragment: dom.fragmentFromNodes(true, false, ...nodes), evaluator, textNodeEvaluator, commandsHandler});
     }
     static fromNode(node, evaluator, textNodeEvaluator, commandsHandler) {
-        return new Template({fragment: dom.fragmentFromNodes(true, node), evaluator, textNodeEvaluator, commandsHandler});
+        return new Template({fragment: dom.fragmentFromNodes(true, true, node), evaluator, textNodeEvaluator, commandsHandler});
+    }
+    static fromSelector(selector, evaluator, textNodeEvaluator, commandsHandler) {
+        const node = document.querySelector(selector);
+        return new Template({fragment: dom.fragmentFromNodes(true, true, node), evaluator, textNodeEvaluator, commandsHandler});
     }
     static render(conf, ...data) {
         return new Template(conf).render(...data);

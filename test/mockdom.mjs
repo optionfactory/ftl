@@ -27,6 +27,7 @@ function mockdom(html) {
     globalThis.Element = jsdom.window.Element;
     globalThis.DocumentFragment = jsdom.window.DocumentFragment;
     globalThis.NodeFilter = jsdom.window.NodeFilter;
+    globalThis.HTMLTemplateElement = jsdom.window.HTMLTemplateElement;
     return jsdom;
 }
 

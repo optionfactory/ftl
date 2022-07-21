@@ -1,22 +1,23 @@
-/* global DocumentFragment */
+/* global DocumentFragment, HTMLTemplateElement */
 
 const dom = {
-    fragmentFromNodes(cloneNodes, ...nodes) {
+    fragmentFromNodes(cloneNodes, flattenTemplates, ...nodes) {
         const fragment = new DocumentFragment();
         for (let i = 0; i !== nodes.length; ++i) {
             const child = nodes[i];
-            fragment.appendChild(cloneNodes ? child.cloneNode(true) : child);
+            const flattened = flattenTemplates && (child instanceof HTMLTemplateElement) ? child.content : child;
+            fragment.appendChild(cloneNodes ? flattened.cloneNode(true) : child);
         }
         return fragment;
     },
     fragmentFromHtml(...html) {
         const el = document.createElement('div');
         el.innerHTML = html.join("");
-        return dom.fragmentFromNodes(false, ...el.childNodes);
+        return dom.fragmentFromNodes(false, false, ...el.childNodes);
     },
     html(...nodes) {
         var r = document.createElement("root");
-        r.appendChild(dom.fragmentFromNodes(true, ...nodes));
+        r.appendChild(dom.fragmentFromNodes(true, false, ...nodes));
         return r.innerHTML;
     },
     addSuccessors(root, successors) {
