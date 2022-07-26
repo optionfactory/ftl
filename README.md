@@ -4,7 +4,7 @@ FTL is a library evaluating `data-tpl-` attributes and `{{text expressions}}`
 ## Getting started
 - Import the lib via CDN: 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/optionfactory/ftl@0.2/dist/ftl.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/optionfactory/ftl@0.3/dist/ftl.iife.min.js"></script>
 ```
 - Init `ExpressionEvaluator` and `TextNodeExpressionEvaluator` giving any custom function
 ```javascript
