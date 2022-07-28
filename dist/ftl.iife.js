@@ -2584,42 +2584,45 @@ var ftl = (function (exports) {
       textNodeEvaluator;
       commandsHandler;
 
-      static fromHtml(html, evaluator, textNodeEvaluator, commandsHandler) {
-          return new Template({fragment: dom.fragmentFromHtml(html), evaluator, textNodeEvaluator, commandsHandler});
+      static fromHtml(html, ec) {
+          return new Template(dom.fragmentFromHtml(html), ec);
       }
-      static fromNodes(nodes, evaluator, textNodeEvaluator, commandsHandler) {
-          return new Template({fragment: dom.fragmentFromNodes(true, false, ...nodes), evaluator, textNodeEvaluator, commandsHandler});
+      static fromNodes(nodes, ec) {
+          return new Template(dom.fragmentFromNodes(true, false, ...nodes), ec);
       }
-      static fromNode(node, evaluator, textNodeEvaluator, commandsHandler) {
-          return new Template({fragment: dom.fragmentFromNodes(true, true, node), evaluator, textNodeEvaluator, commandsHandler});
+      static fromNode(node, ec) {
+          return new Template(dom.fragmentFromNodes(true, true, node), ec);
       }
-      static fromSelector(selector, evaluator, textNodeEvaluator, commandsHandler) {
+      static fromSelector(selector, ec) {
           const node = document.querySelector(selector);
-          return new Template({fragment: dom.fragmentFromNodes(true, true, node), evaluator, textNodeEvaluator, commandsHandler});
+          return new Template(dom.fragmentFromNodes(true, true, node), ec);
       }
-      static render(conf, ...data) {
-          return new Template(conf).render(...data);
+      static render(fragment, ec, ...data) {
+          return new Template(fragment, ec).render(...data);
       }
-      static renderTo(conf, el, ...data) {
-          return new Template(conf).renderTo(el, ...data);
+      static renderTo(fragment, ec, el, ...data) {
+          return new Template(fragment, ec).renderTo(el, ...data);
       }
-      static renderToSelector(conf, selector, ...data) {
-          return new Template(conf).renderToSelector(selector, ...data);
+      static renderToSelector(fragment, ec, selector, ...data) {
+          return new Template(fragment, ec).renderToSelector(selector, ...data);
       }
-      static appendTo(conf, el, ...data) {
-          return new Template(conf).appendTo(el, ...data);
+      static appendTo(fragment, ec, el, ...data) {
+          return new Template(fragment, ec).appendTo(el, ...data);
       }
-      static appendToSelector(conf, selector, ...data) {
-          return new Template(conf).appendToSelector(selector, ...data);
+      static appendToSelector(fragment, ec, selector, ...data) {
+          return new Template(fragment, ec).appendToSelector(selector, ...data);
       }
-      constructor( {fragment, evaluator, textNodeEvaluator, commandsHandler}) {
+      constructor(fragment, {evaluator, textNodeEvaluator, commandsHandler}) {
           this.fragment = fragment;
           this.evaluator = evaluator;
           this.textNodeEvaluator = textNodeEvaluator;
           this.commandsHandler = commandsHandler || new TplCommandsHandler();
       }
       withNode(node) {
-          return Template.fromNode(node, this.evaluator, this.textNodeEvaluator, this.commandsHandler);
+          const evaluator = this.evaluator;
+          const textNodeEvaluator = this.textNodeEvaluator;
+          const commandsHandler = this.commandsHandler;
+          return Template.fromNode(node, {evaluator, textNodeEvaluator, commandsHandler});
       }
       render(...data) {
           const dataPrefix = this.commandsHandler.dataPrefix();
