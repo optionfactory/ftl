@@ -49,7 +49,7 @@ class NodeOperations {
 
 class TplCommandsHandler {
     static DATA_PREFIX = 'tpl';
-    static COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
+    static COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
 
     dataPrefix() {
         return TplCommandsHandler.DATA_PREFIX;
@@ -94,6 +94,9 @@ class TplCommandsHandler {
         const text = template.evaluator.evaluate(value, ...data);
         node.innerHTML = "";
         node.textContent = text;
+    }
+    tplValue(template, node, value, ops, ...data){
+        node.value = template.evaluator.evaluate(value, ...data);
     }
     tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
