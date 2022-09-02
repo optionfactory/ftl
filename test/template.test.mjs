@@ -1,6 +1,6 @@
-import { Template, TplCommandsHandler } from "../src/template.mjs";
-import { ExpressionEvaluator, TextNodeExpressionEvaluator } from "../src/expressions.mjs";
-import { mockdom } from "./mockdom.mjs"
+import {Template, TplCommandsHandler} from "../src/template.mjs";
+import {ExpressionEvaluator, TextNodeExpressionEvaluator} from "../src/expressions.mjs";
+import {mockdom} from "./mockdom.mjs"
 import assert from 'assert';
 
 
@@ -12,7 +12,7 @@ function toHtml(node) {
 
 describe('Template', () => {
     const functions = {
-        math : {
+        math: {
             isEven: v => v % 2 === 0
         }
     };
@@ -24,7 +24,7 @@ describe('Template', () => {
         textNodeEvaluator: tnee,
         commandsHandler: ch
     };
-    
+
     mockdom("<html></html>");
     it('can iterate with *-each', () => {
         let data = [1, 2];
@@ -99,6 +99,23 @@ describe('Template', () => {
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '1234');
     });
+    it('can show error', () => {
+        let data = [1, 2];
+        let template = Template.fromHtml(`<div id="container">
+                    <span>something ignored</span>
+                    <div data-tpl-each="self">{{self.boom()}}</div>
+                </div>`
+            , ec);
+        try {
+            template.render(data)
+        } catch (ex) {
+            const expected = 'Method missing "boom"\n'
+                + '\t--> {{self.boom()}}\n'
+                + '\t--> <div>{{self.boom()}}</div>\n'
+                + '\t--> <div data-tpl-each="self"></div>';
+            assert.strictEqual(ex.message, expected);
 
+        }
+    });
 
 });

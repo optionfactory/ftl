@@ -2316,14 +2316,21 @@ class EvaluatingVisitor {
     call(node) {
         const fnRef = node.value;
         const module = fnRef.module.reduce((acc, m) => acc[m], this.functions);
+        if (!module){
+            throw new Error(`Module "${fnRef.module}" not found`)
+        }
         const args = node.args.map(arg => this.visit(arg));
-        return module[fnRef.value].apply(this, args);
+        const fn = module[fnRef.value];
+        if (!fn){
+            throw new Error(`Function "#${fnRef.module}:${fnRef.value}" not found`)
+        }
+        return fn.apply(this, args);
     }
     nav(node) {
         const from = this.visit(node.from);
         const values = [from];
         for (let i = 0; i !== node.to.length; ++i) {
-            const res = this.visit(node.to[i], values[i], values[i - 1]);
+            const res = this.visit(node.to[i], values[i], values[i - 1], node.to[i - 1] );
             if (res.length === 0) {
                 return values[values.length - 1];
             }
@@ -2368,9 +2375,12 @@ class EvaluatingVisitor {
         }
         return [from[this.visit(node.value)]];
     }
-    method(node, fn, scope) {
+    method(node, fn, scope, caller) {
         if (node.ns && (fn === null || fn === undefined)) {
             return [];
+        }
+        if (!fn){
+            throw new Error(`Method missing "${caller.value}"`)
         }
         const args = node.value.map(arg => this.visit(arg));
         return [fn.apply(scope, args)];
@@ -2458,12 +2468,12 @@ function createNodeFilter(dataPrefix, textNodeExpressionStart, textNodeExpressio
     return function (node) {
         if (node.nodeType === Node.TEXT_NODE) {
             return node.nodeValue.indexOf(textNodeExpressionStart) !== -1 && node.nodeValue.indexOf(textNodeExpressionEnd) !== -1
-                    ? NodeFilter.FILTER_ACCEPT
-                    : NodeFilter.FILTER_REJECT;
+                ? NodeFilter.FILTER_ACCEPT
+                : NodeFilter.FILTER_REJECT;
         }
         return Array.from(node.attributes).some(attr => attr.name.startsWith(attributePrefix))
-                ? NodeFilter.FILTER_ACCEPT
-                : NodeFilter.FILTER_SKIP;
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_SKIP;
     };
 }
 
@@ -2472,26 +2482,30 @@ class NodeOperations {
         this.prefix = prefix;
         this.forRemoval = [];
     }
+
     remove(node) {
         if ('innerHTML' in node) {
             node.innerHTML = '';
         }
         if ('dataset' in node) {
             Object.keys(node.dataset)
-                    .filter(k => k.startsWith(this.prefix))
-                    .forEach(k => delete node.dataset[k]);
+                .filter(k => k.startsWith(this.prefix))
+                .forEach(k => delete node.dataset[k]);
         }
         this.forRemoval.push(node);
     }
+
     popData(node, key) {
         const v = node.dataset[key];
         delete node.dataset[key];
         return v;
     }
+
     replace(node, nodes) {
         dom.addSuccessors(node, nodes);
         this.remove(node);
     }
+
     cleanup() {
         while (this.forRemoval.length) {
             this.forRemoval.pop().remove();
@@ -2506,21 +2520,25 @@ class TplCommandsHandler {
     dataPrefix() {
         return TplCommandsHandler.DATA_PREFIX;
     }
+
     orderedCommands() {
         return TplCommandsHandler.COMMANDS;
     }
+
     tplIf(template, node, value, ops, ...data) {
         const accept = template.evaluator.evaluate(value, ...data);
         if (!accept) {
             ops.remove(node);
         }
     }
+
     tplWith(template, node, value, ops, ...data) {
         const evaluated = template.evaluator.evaluate(value, ...data);
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
         const newNode = template.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
         ops.replace(node, [newNode]);
     }
+
     tplEach(template, node, value, ops, ...data) {
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
         const evaluated = template.evaluator.evaluate(value, ...data);
@@ -2529,6 +2547,7 @@ class TplCommandsHandler {
         });
         ops.replace(node, nodes);
     }
+
     tplRemove(template, node, value, ops, ...data) {
         switch (value.toLowerCase()) {
             case 'tag':
@@ -2542,23 +2561,28 @@ class TplCommandsHandler {
                 break;
         }
     }
+
     tplText(template, node, value, ops, ...data) {
         const text = template.evaluator.evaluate(value, ...data);
         node.innerHTML = "";
         node.textContent = text;
     }
-    tplValue(template, node, value, ops, ...data){
+
+    tplValue(template, node, value, ops, ...data) {
         node.value = template.evaluator.evaluate(value, ...data);
     }
+
     tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
         node.innerHTML = html;
     }
+
     tplClassAppend(template, node, value, ops, ...data) {
         const classes = template.evaluator.evaluate(value, ...data);
         const classesAsArray = Array.isArray(classes) ? classes : [classes];
         node.classList.add(...classesAsArray);
     }
+
     tplAttrAppend(template, node, value, ops, ...data) {
         const attributesAndValues = template.evaluator.evaluate(value, ...data);
         if (attributesAndValues.length === 0) {
@@ -2569,6 +2593,7 @@ class TplCommandsHandler {
             node.setAttribute(k, v);
         });
     }
+
     textNode(template, node, value, ops, ...data) {
         const nodes = template.textNodeEvaluator.evaluate(value, ...data).map(v => {
             return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
@@ -2583,35 +2608,43 @@ class Template {
     evaluator;
     textNodeEvaluator;
     commandsHandler;
-
     static fromHtml(html, ec) {
         return new Template(dom.fragmentFromHtml(html), ec);
     }
+
     static fromNodes(nodes, ec) {
         return new Template(dom.fragmentFromNodes(true, false, ...nodes), ec);
     }
+
     static fromNode(node, ec) {
         return new Template(dom.fragmentFromNodes(true, true, node), ec);
     }
+
     static fromSelector(selector, ec) {
         const node = document.querySelector(selector);
         return new Template(dom.fragmentFromNodes(true, true, node), ec);
     }
+
     static render(fragment, ec, ...data) {
         return new Template(fragment, ec).render(...data);
     }
+
     static renderTo(fragment, ec, el, ...data) {
         return new Template(fragment, ec).renderTo(el, ...data);
     }
+
     static renderToSelector(fragment, ec, selector, ...data) {
         return new Template(fragment, ec).renderToSelector(selector, ...data);
     }
+
     static appendTo(fragment, ec, el, ...data) {
         return new Template(fragment, ec).appendTo(el, ...data);
     }
+
     static appendToSelector(fragment, ec, selector, ...data) {
         return new Template(fragment, ec).appendToSelector(selector, ...data);
     }
+
     constructor(fragment, {evaluator, textNodeEvaluator, commandsHandler}) {
         this.fragment = fragment;
         this.evaluator = evaluator;
@@ -2624,7 +2657,8 @@ class Template {
         const commandsHandler = this.commandsHandler;
         return Template.fromNode(node, {evaluator, textNodeEvaluator, commandsHandler});
     }
-    render(...data) {
+
+    _render(...data) {
         const dataPrefix = this.commandsHandler.dataPrefix();
         const ops = new NodeOperations(dataPrefix);
         const fragment = this.fragment.cloneNode(true);
@@ -2632,9 +2666,14 @@ class Template {
         const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
         let node;
         while ((node = iterator.nextNode()) !== null) {
+            let clonedNode = node.cloneNode();
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
+                try {
+                    this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
+                } catch (ex) {
+                    throw new RenderError(ex.message, clonedNode, ex);
+                }
                 continue;
             }
             const commands = this.commandsHandler.orderedCommands();
@@ -2644,38 +2683,70 @@ class Template {
                     continue;
                 }
                 const value = ops.popData(node, command);
-                this.commandsHandler[command](this, node, value, ops, ...data);
+                try {
+                    this.commandsHandler[command](this, node, value, ops, ...data);
+                } catch (ex) {
+                    throw new RenderError(ex.message, clonedNode, ex);
+                }
             }
             Object.keys(node.dataset)
-                    .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))
-                    .map(k => [k, k.substring(this.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
-                    .forEach(([dataSetKey, attributeName]) => {
-                        const expression = ops.popData(node, dataSetKey);
-                        const evaluated = this.evaluator.evaluate(expression, ...data);
-                        node.setAttribute(attributeName, evaluated);
-                    });
+                .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))
+                .map(k => [k, k.substring(this.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
+                .forEach(([dataSetKey, attributeName]) => {
+                    const expression = ops.popData(node, dataSetKey);
+                    const evaluated = this.evaluator.evaluate(expression, ...data);
+                    node.setAttribute(attributeName, evaluated);
+                });
         }
         ops.cleanup();
         return fragment;
     }
+
+    render(...data) {
+        try {
+            return this._render(...data);
+        } catch (ex) {
+            throw new RenderError(ex.message, this.fragment, ex)
+        }
+    }
+
     renderTo(el, ...data) {
-        const fragment = this.render(...data);
+        let fragment = this.render(...data);
         el.innerHTML = '';
         el.appendChild(fragment);
     }
+
     renderToSelector(selector, ...data) {
         const el = document.querySelector(selector);
         this.renderTo(el, ...data);
     }
+
     appendTo(el, ...data) {
-        const fragment = this.render(...data);
+        let fragment = this.render(...data);
         el.appendChild(fragment);
     }
+
     appendToSelector(selector, ...data) {
         const el = document.querySelector(selector);
         this.appendTo(el, ...data);
     }
 
+}
+
+class RenderError extends Error {
+
+    constructor(message, cause, inner) {
+        if (inner instanceof RenderError) {
+            var r = document.createElement("root");
+            r.appendChild(inner.cause);
+            const _message =  message + "\n\t--> " + r.innerHTML;
+            super(_message);
+        } else {
+            super(message);
+        }
+        this.name = "RenderError";
+        this.cause = cause;
+    }
 }
 
 export { ExpressionEvaluator, Template, TextNodeExpressionEvaluator, TplCommandsHandler };

@@ -9,14 +9,21 @@ class EvaluatingVisitor {
     call(node) {
         const fnRef = node.value;
         const module = fnRef.module.reduce((acc, m) => acc[m], this.functions);
+        if (!module){
+            throw new Error(`Module "${fnRef.module}" not found`)
+        }
         const args = node.args.map(arg => this.visit(arg));
-        return module[fnRef.value].apply(this, args);
+        const fn = module[fnRef.value];
+        if (!fn){
+            throw new Error(`Function "#${fnRef.module}:${fnRef.value}" not found`)
+        }
+        return fn.apply(this, args);
     }
     nav(node) {
         const from = this.visit(node.from);
         const values = [from];
         for (let i = 0; i !== node.to.length; ++i) {
-            const res = this.visit(node.to[i], values[i], values[i - 1]);
+            const res = this.visit(node.to[i], values[i], values[i - 1], node.to[i - 1] );
             if (res.length === 0) {
                 return values[values.length - 1];
             }
@@ -61,9 +68,12 @@ class EvaluatingVisitor {
         }
         return [from[this.visit(node.value)]];
     }
-    method(node, fn, scope) {
+    method(node, fn, scope, caller) {
         if (node.ns && (fn === null || fn === undefined)) {
             return [];
+        }
+        if (!fn){
+            throw new Error(`Method missing "${caller.value}"`)
         }
         const args = node.value.map(arg => this.visit(arg));
         return [fn.apply(scope, args)];
