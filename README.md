@@ -4,9 +4,10 @@ FTL is a library evaluating `data-tpl-` attributes and `{{text expressions}}`
 ## Getting started
 - Import the lib via CDN: 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/optionfactory/ftl@0.6/dist/ftl.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/optionfactory/ftl@0.6/dist/ftl.iife.min.js" integrity="sha512-a1BsVml5krDjVfpUIjhvW+0diyz0tc7xnbg8Ws4zukfFsHCeNqePlgeJYAOU/72n5RO7l+H0Mxnc3o7EDDaKVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 ```
-- Init `ExpressionEvaluator` and `TextNodeExpressionEvaluator` giving any custom function
+
+- Init `ExpressionEvaluator`, `TextNodeExpressionEvaluator` and `TplCommandsHandler` giving any custom function
 ```javascript
 const functions = {
         math : {
@@ -15,6 +16,14 @@ const functions = {
     };
 const ee = new ftl.ExpressionEvaluator(functions);
 const tnee = new ftl.TextNodeExpressionEvaluator(ee);
+const ch = new ftl.TplCommandsHandler();
+const ec = { //context object
+    evaluator: ee,
+    textNodeEvaluator: tnee,
+    commandsHandler: ch
+};
+
+
 ```
 - Define a template following the lib syntax as described below
 ```html
@@ -32,7 +41,7 @@ const tnee = new ftl.TextNodeExpressionEvaluator(ee);
 const data = {title: 'Hello World!'};
 const myTpl = document.querySelector('#my-template');
 ftl.Template
-    .fromNode(myTpl.content, ee, tnee)
+    .fromNode(myTpl.content, ec)
     .renderTo(document.querySelector('#target'), data);
 ```
 
@@ -147,7 +156,7 @@ data = {
 }
 ```
 ```html
-<p data-tpl-text="beautifulText"></p>
+<p data-tpl-html="beautifulText"></p>
 ```
 renders to
 ```html
