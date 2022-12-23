@@ -51,9 +51,8 @@ class NodeOperations {
     }
 }
 
+
 class TplCommandsHandler {
-    static DATA_PREFIX = 'tpl';
-    static COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
 
     dataPrefix() {
         return TplCommandsHandler.DATA_PREFIX;
@@ -140,12 +139,12 @@ class TplCommandsHandler {
     }
 }
 
+TplCommandsHandler.DATA_PREFIX = 'tpl';
+TplCommandsHandler.COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
+
+
 
 class Template {
-    fragment;
-    evaluator;
-    textNodeEvaluator;
-    commandsHandler;
     static fromHtml(html, ec) {
         return new Template(dom.fragmentFromHtml(html), ec);
     }
