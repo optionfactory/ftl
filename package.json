@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "repository": "https://github.com/optionfactory/ftl",
     "keywords": [
         "templating",
@@ -8,9 +8,15 @@
     ],
     "license": "MIT",
     "author": "rferranti",
-    "contributors": ["Petro36", "shun17", "Grogdunn"],
+    "contributors": [
+        "Petro36",
+        "shun17",
+        "Grogdunn"
+    ],
     "main": "index.mjs",
-    "files": ["dist/**"],    
+    "files": [
+        "dist/**"
+    ],
     "scripts": {
         "clean": "rimraf dist && npm prune",
         "initialize": "npm install",
@@ -18,11 +24,11 @@
         "build": "peggy src/expressions-parser.peggy -o src/expressions-parser.mjs --format es && peggy src/expressions-textnode-parser.peggy -o src/expressions-textnode-parser.mjs --format es && npx rollup --config rollup.conf.js"
     },
     "devDependencies": {
-        "@rollup/plugin-node-resolve": "^13.3.0",
-        "jsdom": "^20.0.0",
-        "mocha": "^9.2.2",
-        "peggy": "^2.0.1",
+        "@rollup/plugin-node-resolve": "^15.2.1",
+        "jsdom": "^22.1.0",
+        "mocha": "^10.2.0",
+        "peggy": "^3.0.2",
         "rollup-plugin-terser": "7.0.2",
-        "terser": ">=5.14.2"
+        "terser": "^5.20.0"
     }
 }

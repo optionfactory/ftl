@@ -1,5 +1,5 @@
 /* global NodeFilter, Node, DocumentFragment */
-import {dom} from "./dom.mjs";
+import { dom } from "./dom.mjs";
 
 function createNodeFilter(dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) {
     const attributePrefix = `data-${dataPrefix}-`;
@@ -72,7 +72,7 @@ class TplCommandsHandler {
     tplWith(template, node, value, ops, ...data) {
         const evaluated = template.evaluator.evaluate(value, ...data);
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
-        const newNode = template.withNode(node).render(...data, varName ? {[varName]: evaluated} : evaluated);
+        const newNode = template.withNode(node).render(...data, varName ? { [varName]: evaluated } : evaluated);
         ops.replace(node, [newNode]);
     }
 
@@ -80,7 +80,7 @@ class TplCommandsHandler {
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
         const evaluated = template.evaluator.evaluate(value, ...data);
         const nodes = evaluated.map(v => {
-            return template.withNode(node).render(...data, varName ? {[varName]: v} : v);
+            return template.withNode(node).render(...data, varName ? { [varName]: v } : v);
         });
         ops.replace(node, nodes);
     }
@@ -132,9 +132,14 @@ class TplCommandsHandler {
     }
 
     textNode(template, node, value, ops, ...data) {
-        const nodes = template.textNodeEvaluator.evaluate(value, ...data).map(v => {
-            return v.t === 't' ? document.createTextNode(v.v) : dom.fragmentFromHtml(v.v);
-        });
+        const nodes = template.textNodeEvaluator.evaluate(value, ...data)
+            .map(v => {
+                switch (v.t) {
+                    case 't': return document.createTextNode(v.v);
+                    case 'h': return dom.fragmentFromHtml(v.v);
+                    case 'n': return v.v;
+                }
+            });
         ops.replace(node, nodes);
     }
 }
@@ -182,7 +187,7 @@ class Template {
         return new Template(fragment, ec).appendToSelector(selector, ...data);
     }
 
-    constructor(fragment, {evaluator, textNodeEvaluator, commandsHandler}) {
+    constructor(fragment, { evaluator, textNodeEvaluator, commandsHandler }) {
         this.fragment = fragment;
         this.evaluator = evaluator;
         this.textNodeEvaluator = textNodeEvaluator;
@@ -192,7 +197,7 @@ class Template {
         const evaluator = this.evaluator;
         const textNodeEvaluator = this.textNodeEvaluator;
         const commandsHandler = this.commandsHandler;
-        return Template.fromNode(node, {evaluator, textNodeEvaluator, commandsHandler});
+        return Template.fromNode(node, { evaluator, textNodeEvaluator, commandsHandler });
     }
 
     _render(...data) {
@@ -276,7 +281,7 @@ class RenderError extends Error {
         if (inner instanceof RenderError) {
             var r = document.createElement("root");
             r.appendChild(inner.cause);
-            const _message =  message + "\n\t--> " + r.innerHTML;
+            const _message = message + "\n\t--> " + r.innerHTML;
             super(_message);
         } else {
             super(message);
@@ -286,4 +291,4 @@ class RenderError extends Error {
     }
 }
 
-export {Template, TplCommandsHandler};
+export { Template, TplCommandsHandler };

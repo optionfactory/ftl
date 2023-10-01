@@ -110,9 +110,13 @@ class TextNodeExpressionEvaluator {
         });
     }
     evaluateAst(ast, dataStack) {
-        return ast.map(node => node.t === 't' ? node : {
-            t: node.t === 'te' ? 't' : 'h',
-            v: this.evaluator.evaluateAst(node.v, dataStack)
+        return ast.map(node => {
+            switch(node.t){
+                case 't': return node;
+                case 'te': return {t: 't', v: this.evaluator.evaluateAst(node.v, dataStack)};
+                case 'he': return {t: 'h', v: this.evaluator.evaluateAst(node.v, dataStack)};
+                case 'ne': return {t: 'n', v: this.evaluator.evaluateAst(node.v, dataStack)};
+            }
         });
     }
     evaluate(expression, ...data) {
