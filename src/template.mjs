@@ -147,7 +147,23 @@ class TplCommandsHandler {
 TplCommandsHandler.DATA_PREFIX = 'tpl';
 TplCommandsHandler.COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
 
-
+class EvaluationContext {
+    constructor({evaluator, textNodeEvaluator, commandsHandler }){
+        this.evaluator = evaluator;
+        this.textNodeEvaluator = textNodeEvaluator;
+        this.commandsHandler = commandsHandler;
+    }
+    static configure(functions){
+        const ee = new ftl.ExpressionEvaluator(functions);
+        const tnee = new ftl.TextNodeExpressionEvaluator(ee);
+        const ch = new ftl.TplCommandsHandler();
+        return new EvaluationContext({
+            evaluator: ee,
+            textNodeEvaluator: tnee,
+            commandsHandler: ch
+        });        
+    }
+}
 
 class Template {
     static fromHtml(html, ec) {
@@ -291,4 +307,4 @@ class RenderError extends Error {
     }
 }
 
-export { Template, TplCommandsHandler };
+export { Template, TplCommandsHandler, EvaluationContext };
