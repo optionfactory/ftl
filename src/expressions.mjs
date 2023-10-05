@@ -1,5 +1,5 @@
-import { parse } from "./expressions-parser.mjs";
-import { parse as parseTextNode } from "./expressions-textnode-parser.mjs";
+import { parse } from "./expressions-parser.peggy";
+import { parse as parseTextNode } from "./expressions-textnode-parser.peggy";
 
 class EvaluatingVisitor {
     constructor(dataStack, functions) {

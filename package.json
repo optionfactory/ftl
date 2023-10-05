@@ -21,7 +21,7 @@
         "clean": "rimraf dist && npm prune",
         "initialize": "npm install",
         "test": "mocha --recursive -R spec",
-        "build": "peggy src/expressions-parser.peggy -o src/expressions-parser.mjs --format es && peggy src/expressions-textnode-parser.peggy -o src/expressions-textnode-parser.mjs --format es && npx rollup --config rollup.conf.js"
+        "build": "npx rollup --config rollup.conf.js"
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^15.2.1",
