@@ -109,10 +109,8 @@
                 richCar: "Maserati",
                 poorCar: "Mazda"
             };
-            let ee = new ftl.ExpressionEvaluator(functions);
-            let tne = new ftl.TextNodeExpressionEvaluator(ee);
-            let template = ftl.Template.fromNode(document.querySelector("[data-ref=template]").content, ee, tne);
-            
+            let ec = ftl.EvaluationContext.configure(functions);
+            let template = ftl.Template.fromNode(document.querySelector("[data-ref=template]").content, ec);            
             template.renderTo(document.querySelector("[data-ref=target]"), data);
             
         </script>
