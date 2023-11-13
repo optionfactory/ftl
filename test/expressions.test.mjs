@@ -1,4 +1,4 @@
-import {ExpressionEvaluator} from "../src/expressions.mjs";
+import {ExpressionEvaluator} from "../dist/ftl.mjs";
 
 import assert from 'assert';
 

@@ -1,5 +1,4 @@
-import {Template, TplCommandsHandler} from "../src/template.mjs";
-import {ExpressionEvaluator, TextNodeExpressionEvaluator} from "../src/expressions.mjs";
+import {EvaluationContext, Template } from "../dist/ftl.mjs";
 import {mockdom} from "./mockdom.mjs"
 import assert from 'assert';
 
@@ -11,19 +10,11 @@ function toHtml(node) {
 }
 
 describe('Template', () => {
-    const functions = {
+    const ec = EvaluationContext.configure({
         math: {
             isEven: v => v % 2 === 0
         }
-    };
-    const ee = new ExpressionEvaluator(functions);
-    const tnee = new TextNodeExpressionEvaluator(ee);
-    const ch = new TplCommandsHandler();
-    const ec = {
-        evaluator: ee,
-        textNodeEvaluator: tnee,
-        commandsHandler: ch
-    };
+    });
 
     mockdom("<html></html>");
     it('can iterate with *-each', () => {

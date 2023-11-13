@@ -1,5 +1,6 @@
 /* global NodeFilter, Node, DocumentFragment */
 import { dom } from "./dom.mjs";
+import { ExpressionEvaluator,  TextNodeExpressionEvaluator} from "./expressions.mjs";
 
 function createNodeFilter(dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) {
     const attributePrefix = `data-${dataPrefix}-`;
@@ -154,9 +155,9 @@ class EvaluationContext {
         this.commandsHandler = commandsHandler;
     }
     static configure(functions){
-        const ee = new ftl.ExpressionEvaluator(functions);
-        const tnee = new ftl.TextNodeExpressionEvaluator(ee);
-        const ch = new ftl.TplCommandsHandler();
+        const ee = new ExpressionEvaluator(functions);
+        const tnee = new TextNodeExpressionEvaluator(ee);
+        const ch = new TplCommandsHandler();
         return new EvaluationContext({
             evaluator: ee,
             textNodeEvaluator: tnee,
