@@ -41,18 +41,74 @@ describe('Template', () => {
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div><h1>test</h1></div>');
     });
+    it('rendering null html from attribute yields empty string', () => {
+        let data = {a: null};
+        let template = Template.fromHtml('<div data-tpl-html="a">nope</div>', ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div></div>');
+    });
+    it('rendering undefined html from attribute yields empty string', () => {
+        let data = {a: undefined};
+        let template = Template.fromHtml('<div data-tpl-html="a">nope</div>', ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div></div>');
+    });
+
     it('can render text from attribute', () => {
         let data = {a: '<h1>test</h1>'};
         let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', ec);
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div>&lt;h1&gt;test&lt;/h1&gt;</div>');
     });
+    it('rendering null text from attribute yields empty string', () => {
+        let data = {a: null};
+        let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div></div>');
+    });
+    it('rendering undefined text from attribute yield empty string', () => {
+        let data = {a: undefined};
+        let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div></div>');
+    });        
     it('can render text from a text node', () => {
         let data = {a: "<>"};
         let template = Template.fromHtml("<div>b{{a}}d</div>", ec);
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div>b&lt;&gt;d</div>');
     });
+    it('rendering null text from a text node yield empty string', () => {
+        let data = {a: null};
+        let template = Template.fromHtml("<div>b{{a}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });    
+    it('rendering undefined text from a text node yield empty string', () => {
+        let data = {a: undefined};
+        let template = Template.fromHtml("<div>b{{a}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });      
+    it('can render html from a text node', () => {
+        let data = {a: "<span></span>"};
+        let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
+    });
+    it('rendering null text from a text node yield empty string', () => {
+        let data = {a: null};
+        let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });    
+    it('rendering undefined text from a text node yield empty string', () => {
+        let data = {a: undefined};
+        let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });      
+
     it('can evaluate a data-* attribute', () => {
         let data = {a: 1, b: 2};
         let template = Template.fromHtml('<div data-tpl-former="a" data-tpl-latter="b">content</div>', ec);

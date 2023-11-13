@@ -112,7 +112,7 @@ class TplCommandsHandler {
 
     tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
-        node.innerHTML = html;
+        node.innerHTML = html === null || html === undefined ? "" : html;
     }
 
     tplClassAppend(template, node, value, ops, ...data) {
@@ -136,7 +136,7 @@ class TplCommandsHandler {
         const nodes = template.textNodeEvaluator.evaluate(value, ...data)
             .map(v => {
                 switch (v.t) {
-                    case 't': return document.createTextNode(v.v);
+                    case 't': return document.createTextNode(v.v === null || v.v === undefined ? "" : v.v);
                     case 'h': return dom.fragmentFromHtml(v.v);
                     case 'n': return v.v;
                 }
