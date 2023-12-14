@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "repository": "https://github.com/optionfactory/ftl",
     "keywords": [
         "templating",
@@ -24,11 +24,11 @@
         "build": "npx rollup --config rollup.conf.js"
     },
     "devDependencies": {
-        "@rollup/plugin-node-resolve": "^15.2.1",
-        "jsdom": "^22.1.0",
+        "@rollup/plugin-node-resolve": "^15.2.3",
+        "jsdom": "^23.0.1",
         "mocha": "^10.2.0",
         "peggy": "^3.0.2",
         "rollup-plugin-terser": "7.0.2",
-        "terser": "^5.20.0"
+        "terser": "^5.26.0"
     }
 }

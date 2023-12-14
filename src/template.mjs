@@ -154,6 +154,20 @@ class EvaluationContext {
         this.textNodeEvaluator = textNodeEvaluator;
         this.commandsHandler = commandsHandler;
     }
+    withModule(name, functions){
+        const fns = {
+            ...this.evaluator.functions,
+            [name]: functions,
+        };
+        return configure(fns)
+    }
+    withModules(functions){
+        const fns = {
+            ...this.evaluator.functions,
+            ...functions,
+        };
+        return configure(fns)
+    }
     static configure(functions){
         const ee = new ExpressionEvaluator(functions);
         const tnee = new TextNodeExpressionEvaluator(ee);
