@@ -20,6 +20,12 @@ const dom = {
         r.appendChild(dom.fragmentFromNodes(true, false, ...nodes));
         return r.innerHTML;
     },
+    addPredecessors(root, predecessors) {
+        const els = Array.from(predecessors);
+        for (let i = 0; i !== els.length; ++i) {
+            root.parentNode.insertBefore(els[i], root);
+        }
+    },    
     addSuccessors(root, successors) {
         const els = Array.from(successors);
         let predecessor = root.nextSibling;

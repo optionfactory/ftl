@@ -41,6 +41,11 @@ class NodeOperations {
     }
 
     replace(node, nodes) {
+        dom.addPredecessors(node, nodes);
+        this.remove(node);
+    }
+
+    replaceAndEvaluate(node, nodes) {
         dom.addSuccessors(node, nodes);
         this.remove(node);
     }
@@ -89,7 +94,7 @@ class TplCommandsHandler {
     tplRemove(template, node, value, ops, ...data) {
         switch (value.toLowerCase()) {
             case 'tag':
-                ops.replace(node, node.childNodes);
+                ops.replaceAndEvaluate(node, node.childNodes);
                 break;
             case 'body':
                 node.innerHTML = '';
@@ -102,6 +107,7 @@ class TplCommandsHandler {
 
     tplText(template, node, value, ops, ...data) {
         const text = template.evaluator.evaluate(value, ...data);
+        node.contentHandled = true;
         node.innerHTML = "";
         node.textContent = text;
     }
@@ -112,6 +118,7 @@ class TplCommandsHandler {
 
     tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
+        node.contentHandled = true;
         node.innerHTML = html === null || html === undefined ? "" : html;
     }
 
@@ -242,6 +249,9 @@ class Template {
             let clonedNode = node.cloneNode();
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
+                if(node.parentElement?.contentHandled){
+                    continue;
+                }
                 try {
                     this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
                 } catch (ex) {
