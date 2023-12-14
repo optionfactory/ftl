@@ -107,9 +107,10 @@ class TplCommandsHandler {
 
     tplText(template, node, value, ops, ...data) {
         const text = template.evaluator.evaluate(value, ...data);
-        node.contentHandled = true;
-        node.innerHTML = "";
-        node.textContent = text;
+        const newNode = node.cloneNode();
+        newNode.innerHTML = "";
+        newNode.textContent = text;
+        ops.replace(node, [newNode]);
     }
 
     tplValue(template, node, value, ops, ...data) {
@@ -118,8 +119,9 @@ class TplCommandsHandler {
 
     tplHtml(template, node, value, ops, ...data) {
         const html = template.evaluator.evaluate(value, ...data);
-        node.contentHandled = true;
-        node.innerHTML = html === null || html === undefined ? "" : html;
+        const newNode = node.cloneNode();
+        newNode.innerHTML = html === null || html === undefined ? "" : html;
+        ops.replace(node, [newNode]);
     }
 
     tplClassAppend(template, node, value, ops, ...data) {
@@ -249,9 +251,6 @@ class Template {
             let clonedNode = node.cloneNode();
             ops.cleanup();
             if (node.nodeType === Node.TEXT_NODE) {
-                if(node.parentElement?.contentHandled){
-                    continue;
-                }
                 try {
                     this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
                 } catch (ex) {
