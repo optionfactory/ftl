@@ -6,30 +6,47 @@ class EvaluatingVisitor {
         this.dataStack = dataStack;
         this.functions = functions;
     }
+    and(node){
+        return this.visit(node.lhs) && this.visit(node.rhs);
+    }
+    or(node){
+        return this.visit(node.lhs) || this.visit(node.rhs);
+    }
+    not(node){
+        return !this.visit(node.expr);
+    }
+    eq(node){
+        const lhs = this.visit(node.lhs);
+        const rhs = this.visit(node.rhs);
+        const eq = lhs === rhs;
+        return node.op === "==" ? eq : !eq;
+    }
+    cmp(node){
+        const lhs = this.visit(node.lhs);
+        const rhs = this.visit(node.rhs);
+        switch(node.op){
+            case ">":
+                return lhs > rhs;
+            case "<":
+                return lhs < rhs;
+            case ">=":
+                return lhs >= rhs;
+            case "<=":
+                return lhs <= rhs;
+        }   
+    }
     call(node) {
         const fnRef = node.value;
-        const module = fnRef.module.reduce((acc, m) => acc[m], this.functions);
+        const module = fnRef.module == null ? this.functions :  this.functions[fnRef.module];
         if (!module){
             throw new Error(`Module "${fnRef.module}" not found`)
         }
-        const args = node.args.map(arg => this.visit(arg));
         const fn = module[fnRef.value];
         if (!fn){
-            throw new Error(`Function "#${fnRef.module}:${fnRef.value}" not found`)
+            throw new Error(`Function "#${fnRef.module == null ? '' : fnRef.module+":"}${fnRef.value}" not found`)
         }
+        const args = node.args.map(arg => this.visit(arg));
         return fn.apply(this, args);
-    }
-    nav(node) {
-        const from = this.visit(node.from);
-        const values = [from];
-        for (let i = 0; i !== node.to.length; ++i) {
-            const res = this.visit(node.to[i], values[i], values[i - 1], node.to[i - 1] );
-            if (res.length === 0) {
-                return values[values.length - 1];
-            }
-            values.push(res[0]);
-        }
-        return values[values.length - 1];
     }
     literal(node) {
         return node.value;
@@ -47,35 +64,47 @@ class EvaluatingVisitor {
         return undefined;
     }
     dict(node) {
-        return node.value.map(entry => [entry[0].value, this.visit(entry[1])]);
+        return Object.fromEntries(node.value.map(entry => [entry[0].value, this.visit(entry[1])]));
     }
     array(node) {
         return node.value.map(v => this.visit(v));
     }
-    //navto
-    cond(node, from) {
-        return [from ? (node.ifTrue === null ? from : this.visit(node.ifTrue)) : this.visit(node.ifFalse)];
+    ter(node) {
+        return this.visit(node.cond) ? this.visit(node.ifTrue) : this.visit(node.ifFalse);
+    }    
+    nav(node) {
+        const from = this.visit(node.from);
+        const values = [from];
+        for (let i = 0; i !== node.to.length; ++i) {
+            const res = this.visit(node.to[i], values[i], values[i - 1], node.to[i - 1] );
+            if (res.length === 0) {
+                return undefined;
+            }
+            values.push(res[0]);
+        }
+        return values[values.length - 1];
     }
+    //navto
     dot(node, from) {
-        if (node.ns && (from === null || from === undefined)) {
+        if(node.ns && (from === null || from === undefined)){
             return [];
         }
-        return [from[node.value]];
+        return [from[node.rhs]];
     }
     sub(node, from) {
         if (node.ns && (from === null || from === undefined)) {
             return [];
         }
-        return [from[this.visit(node.value)]];
+        return [from[this.visit(node.rhs)]];
     }
     method(node, fn, scope, caller) {
         if (node.ns && (fn === null || fn === undefined)) {
             return [];
         }
         if (!fn){
-            throw new Error(`Method missing "${caller.value}"`)
+            throw new Error(`Method missing "${caller.rhs}"`)
         }
-        const args = node.value.map(arg => this.visit(arg));
+        const args = node.args.map(arg => this.visit(arg));
         return [fn.apply(scope, args)];
     }
     //

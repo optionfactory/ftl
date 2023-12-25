@@ -14,7 +14,8 @@ class RollupPeggyWithSourceMap {
         const generated = generate(grammar, {
             output: 'source-and-map',
             grammarSource: id,
-            format: 'es'
+            format: 'es',
+            cache: true
         });
         const path = id.split("/");
         const res = generated.toStringWithSourceMap({});
