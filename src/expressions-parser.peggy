@@ -1,10 +1,5 @@
 {{
-    function unescape1(v){
-    	return v;
-    }
-    function unescape2(v){
-    	return v;
-    }
+
 }}
 
 Root 
@@ -38,7 +33,7 @@ NotExpression
 
 
 Navigation    
-    = from:ParensExpression _ to:(@NavigationExpression _)+ { return {type: "nav", from, to} }   
+    = lhs:ParensExpression _ rhs:(@NavigationExpression _)+ { return {type: "nav", lhs, rhs} }   
     / ParensExpression
 
 
@@ -75,16 +70,16 @@ BooleanLiteral "boolean"
     = "true" { return {type: "literal", value: true}; }
     / "false" { return {type: "literal", value: false}; }
 
-NumberLiteral "number" = p:[0-9]+ s:("." @[0-9]*)? { 
+NumberLiteral "number" = p:$[0-9]+ s:("." @$[0-9]*)? { 
     if (s == null){
-        return {type: "literal", value: parseInt(p.join(""))};
+        return {type: "literal", value: parseInt(p)};
     }
-    return {type: "literal", value: parseFloat(p.join("") +"." + s.join(""))};
+    return {type: "literal", value: parseFloat(p +"." + s)};
 }
 
 StringLiteral "string"
-    = "'" v:[^']* "'"  { return {type: "literal", value: unescape1(v.join(""))}; }
-    / '"' v:[^"]* '"'  { return {type: "literal", value: unescape2(v.join(""))}; }
+    = "'" value:$[^']* "'"  { return {type: "literal", value}; }
+    / '"' value:$[^"]* '"'  { return {type: "literal", value}; }
 
 ArrayLiteral "array" = "[" _ h:(Expression)? _ t:("," _ @Expression _)* "]" { 
     const value = h == null ? [] : [h].concat(t);
@@ -101,12 +96,12 @@ DictLiteral "dict" = "{" _ h:(@StringLiteral _ ":" _ @Expression)? _ t:("," _ @S
 }
 
 FunctionRef "function-ref"
-    = '#' m:(@[a-zA-Z$_]+ ':')? p:[a-zA-Z$_] s:[a-zA-Z$_0-9_]* {
-        return {type: 'function', module: m == null ? null : m.join(''), value: p + s.join("")}
+    = '#' module:(@$[a-zA-Z$_]+ ':')? p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* {
+        return {type: 'function', module, value: p + s}
     }
 
 Symbol "symbol"
-    = p:[a-zA-Z$_] s:[a-zA-Z$_0-9_]* { return {type: "symbol", value: p + s.join("")}; }
+    = p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* { return {type: "symbol", value: p + s}; }
     
 AccessOp 
     = "."

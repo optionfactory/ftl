@@ -73,10 +73,10 @@ class EvaluatingVisitor {
         return this.visit(node.cond) ? this.visit(node.ifTrue) : this.visit(node.ifFalse);
     }    
     nav(node) {
-        const from = this.visit(node.from);
+        const from = this.visit(node.lhs);
         const values = [from];
-        for (let i = 0; i !== node.to.length; ++i) {
-            const res = this.visit(node.to[i], values[i], values[i - 1], node.to[i - 1] );
+        for (let i = 0; i !== node.rhs.length; ++i) {
+            const res = this.visit(node.rhs[i], values[i], values[i - 1], node.rhs[i - 1] );
             if (res.length === 0) {
                 return undefined;
             }
