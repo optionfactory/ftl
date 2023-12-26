@@ -3,7 +3,6 @@ import {ExpressionEvaluator} from "../dist/ftl.mjs";
 
 import { strict as assert } from 'node:assert';
 import { mock, test, it, describe } from 'node:test'; 
-//import assert from 'assert';
 
 let evaluator = new ExpressionEvaluator({
     one: () => 1,

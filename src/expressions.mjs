@@ -74,15 +74,17 @@ class EvaluatingVisitor {
     }    
     nav(node) {
         const from = this.visit(node.lhs);
-        const values = [from];
+        let prev = undefined;
+        let cur = from;
         for (let i = 0; i !== node.rhs.length; ++i) {
-            const res = this.visit(node.rhs[i], values[i], values[i - 1], node.rhs[i - 1] );
+            const res = this.visit(node.rhs[i], cur, prev, node.rhs[i - 1] );
             if (res.length === 0) {
                 return undefined;
             }
-            values.push(res[0]);
+            prev = cur;
+            cur = res[0];
         }
-        return values[values.length - 1];
+        return cur;
     }
     //navto
     dot(node, from) {

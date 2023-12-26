@@ -1,7 +1,22 @@
 import {EvaluationContext, Template } from "../dist/ftl.mjs";
-import {mockdom} from "./mockdom.mjs"
 import { strict as assert } from 'node:assert';
 import { mock, test, it, describe } from 'node:test'; 
+import { JSDOM } from "jsdom";
+
+
+function mockdom(html) {
+    let jsdom = new JSDOM(html);
+    globalThis.document = jsdom.window.document;
+    globalThis.Node = jsdom.window.Node;
+    globalThis.NodeList = jsdom.window.NodeList;
+    globalThis.Element = jsdom.window.Element;
+    globalThis.DocumentFragment = jsdom.window.DocumentFragment;
+    globalThis.NodeFilter = jsdom.window.NodeFilter;
+    globalThis.HTMLTemplateElement = jsdom.window.HTMLTemplateElement;
+    return jsdom;
+}
+
+mockdom("<html></html>");
 
 
 function toHtml(node) {
@@ -10,14 +25,14 @@ function toHtml(node) {
     return r.innerHTML;
 }
 
-describe('Template', () => {
-    const ec = EvaluationContext.configure({
-        math: {
-            isEven: v => v % 2 === 0
-        }
-    });
+const ec = EvaluationContext.configure({
+    math: {
+        isEven: v => v % 2 === 0
+    }
+});
 
-    mockdom("<html></html>");
+describe('Template', () => {
+
     it('can iterate with *-each', () => {
         let data = [1, 2];
         let template = Template.fromHtml('<div data-tpl-each="self">{{self}}</div>', ec);
