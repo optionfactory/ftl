@@ -1,6 +1,9 @@
 import {ExpressionEvaluator} from "../dist/ftl.mjs";
 
-import assert from 'assert';
+
+import { strict as assert } from 'node:assert';
+import { mock, test, it, describe } from 'node:test'; 
+//import assert from 'assert';
 
 let evaluator = new ExpressionEvaluator({
     one: () => 1,
@@ -41,10 +44,10 @@ describe('Expression', () => {
     verify("can use string literal", '"abc"', {}, "abc");
     verify("can use string literal", "'abc'", {}, "abc");
     verify("can use number literal", "12.3", {}, 12.3);
-
     verify(null, "(!a && !b) == !(a || b)", {a: true, b: false}, true);
     verify(null, "!a && !b == !(a || b)", {a: true, b: false}, false);
     verify(null, "a.b[c.d].toLowerCase()", {a: {b : { z: "M"}}, c: {d : "z"}}, "m");
+    verify(null, "[1,2][1]", {}, 2);
 
 
     it('can use overlays', () => {

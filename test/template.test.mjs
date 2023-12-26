@@ -1,6 +1,7 @@
 import {EvaluationContext, Template } from "../dist/ftl.mjs";
 import {mockdom} from "./mockdom.mjs"
-import assert from 'assert';
+import { strict as assert } from 'node:assert';
+import { mock, test, it, describe } from 'node:test'; 
 
 
 function toHtml(node) {
