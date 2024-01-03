@@ -1,5 +1,5 @@
 # FTL - HTML template library
-FTL is a library evaluating `data-tpl-` attributes and `{{text expressions}}`
+FTL is a templating library targeting browsers similar to thymeleaf
 
 ## Getting started
 - Import the lib via CDN: 
@@ -7,25 +7,15 @@ FTL is a library evaluating `data-tpl-` attributes and `{{text expressions}}`
 <script src="https://cdn.jsdelivr.net/npm/optionfactory/ftl@{VERSION}/dist/ftl.iife.min.js" integrity="{INTEGRITY}" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 ```
 
-- Init `ExpressionEvaluator`, `TextNodeExpressionEvaluator` and `TplCommandsHandler` giving any custom function
+- Init `EvaluationContext`, optionally registering custom modules
 ```javascript
-const functions = {
+const ec = ftl.EvaluationContext.configure({
         math : {
             isEven: v => v % 2 === 0
-        }
-    };
-const ee = new ftl.ExpressionEvaluator(functions);
-const tnee = new ftl.TextNodeExpressionEvaluator(ee);
-const ch = new ftl.TplCommandsHandler();
-const ec = { //context object
-    evaluator: ee,
-    textNodeEvaluator: tnee,
-    commandsHandler: ch
-};
-
-
+        }    
+});
 ```
-- Define a template following the lib syntax as described below
+- Define a template using a template tag, a string, a `DocumentFragment` or a `Node`
 ```html
 <body>
     ...
@@ -36,38 +26,51 @@ const ec = { //context object
     ...
 </body>
 ```
+
+- Create a template
+```javascript
+const template = ftl.Template.fromSelector('#my-template', ec);
+```
 - Render the template
 ```javascript
 const data = {title: 'Hello World!'};
-const myTpl = document.querySelector('#my-template');
-ftl.Template
-    .fromNode(myTpl.content, ec)
-    .renderTo(document.querySelector('#target'), data);
+template.renderToSelector('#target', data);
 ```
 
 ## Attributes evaluation
-All attributes starting with `data-tpl-` (case sensitive) are evaluated in the followind order: `data-tpl-if, data-tpl-with, data-tpl-each, data-tpl-text, data-tpl-html, data-tpl-remove, data-tpl-*`
+All attributes starting with `data-tpl-` (case sensitive) are evaluated in the followind order: 
+  - `data-tpl-if`
+  - `data-tpl-with`
+  - `data-tpl-each`
+  - `data-tpl-value`
+  - `data-tpl-class-append`
+  - `data-tpl-attr-append`
+  - `data-tpl-text`
+  - `data-tpl-html`
+  - `data-tpl-remove`
+  - `data-tpl-*`
 
 ### data-tpl-if
 Removes from the DOM the element if the expression evaluates as false
+
 ```html
 <h3>Tracking:</h3>
 <p data-tpl-if="delivered">Your package has been delivered</p>
 ```
----
+
+E.g:
 ```javascript
 data = {delivered: true}
 ```
-renders to:
 ```html
 <h3>Tracking:</h3>
 <p>Your package has been delivered</p>
 ```
----
+
+E.g:
 ```javascript
 data = {delivered: false}
 ```
-renders to:
 ```html
 <h3>Tracking:</h3>
 ```
@@ -137,11 +140,11 @@ renders to
 Evaluates the given expression and places it as text node inside the given element
 ```javascript
 data = {
-    beautifulText: "I'm so <i>pretty!</i>"
+    text: "I'm so <i>pretty!</i>"
 }
 ```
 ```html
-<p data-tpl-text="beautifulText"></p>
+<p data-tpl-text="text"></p>
 ```
 renders to
 ```html
@@ -152,11 +155,11 @@ renders to
 Evaluates the given expression and places it as inner html of the given element
 ```javascript
 data = {
-    beautifulText: "I'm so <i>pretty!</i>"
+    text: "I'm so <i>pretty!</i>"
 }
 ```
 ```html
-<p data-tpl-html="beautifulText"></p>
+<p data-tpl-html="text"></p>
 ```
 renders to
 ```html
@@ -328,4 +331,22 @@ renders to
 ```html
 <p>74</p>
 ```
+### Operators, literals and precedence
+
+- Dict literals: e.g: `{"a": 1, "b": 2}`
+- Array literals: e.g: `[1,2,3]`
+- String literals: e.g: `"a"` or `'a'`
+- Boolean literals: e.g: `true` or `false`
+- Number literals: e.g: `3` or `3.1`
+- Function calls: e.g: `#module:fn()` or `#fn(1,2,3)`
+- Parenthesized expressions: e.g: `(a || b) && c`
+- Method call: e.g: `a.toLowerCase()`
+- Array access: e.g: `a[b]` or `a?.[b]`
+- Member access: e.g: `a.b` or `a?.b`
+- Logical not: e.g: `!a`
+- Relational operators: e.g: `a >= b` or `a > b` or `a <= b` or `a <= b`
+- Equality operators: e.g: `a == b` or `a != b`
+- Logical and expressions: e.g: `a && b`
+- Logical or expressions:e.g: `a || b`
+- Ternary operator: e.g: `a ? b : c`
 

@@ -64,7 +64,6 @@ AnyLiteral
     / StringLiteral
     / ArrayLiteral
     / DictLiteral
-    / StringLiteral
 
 BooleanLiteral "boolean"
     = "true" { return {type: "literal", value: true}; }
