@@ -1,6 +1,11 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "0.16.0",
+    "version": "0.17.0",
+    "main": "./dist/ftl.iife.js",
+    "module": "./dist/ftl.mjs",
+    "files": [
+        "dist/**"
+    ],
     "repository": "https://github.com/optionfactory/ftl",
     "keywords": [
         "templating",
@@ -12,10 +17,6 @@
         "Petro36",
         "shun17",
         "Grogdunn"
-    ],
-    "main": "index.mjs",
-    "files": [
-        "dist/**"
     ],
     "scripts": {
         "clean": "rimraf dist && npm prune",
