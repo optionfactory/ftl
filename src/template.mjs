@@ -1,5 +1,5 @@
 /* global NodeFilter, Node, DocumentFragment */
-import { dom } from "./dom.mjs";
+import { Fragments } from "./fragments.mjs";
 import { ExpressionEvaluator,  TextNodeExpressionEvaluator} from "./expressions.mjs";
 
 function createNodeFilter(dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) {
@@ -41,12 +41,22 @@ class NodeOperations {
     }
 
     replace(node, nodes) {
-        dom.addPredecessors(node, nodes);
+        const els = Array.from(nodes);
+        for (let i = 0; i !== els.length; ++i) {
+            node.parentNode.insertBefore(els[i], node);
+        }
         this.remove(node);
     }
 
     replaceAndEvaluate(node, nodes) {
-        dom.addSuccessors(node, nodes);
+        const els = Array.from(nodes);
+        let predecessor = node.nextSibling;
+        for (let i = 0; i !== els.length; ++i) {
+            const el = els[i];
+            const lastRealElement = (el instanceof DocumentFragment) ? el.lastChild : el;
+            node.parentNode.insertBefore(el, predecessor);
+            predecessor = lastRealElement?.nextSibling;
+        }
         this.remove(node);
     }
 
@@ -146,7 +156,7 @@ class TplCommandsHandler {
             .map(v => {
                 switch (v.t) {
                     case 't': return document.createTextNode(v.v === null || v.v === undefined ? "" : v.v);
-                    case 'h': return dom.fragmentFromHtml(v.v);
+                    case 'h': return Fragments.fromHtml(v.v);
                     case 'n': return v.v;
                 }
             });
@@ -191,20 +201,20 @@ class EvaluationContext {
 
 class Template {
     static fromHtml(html, ec) {
-        return new Template(dom.fragmentFromHtml(html), ec);
+        return new Template(Fragments.fromHtml(html), ec);
     }
-
+    
     static fromNodes(nodes, ec) {
-        return new Template(dom.fragmentFromNodes(true, false, ...nodes), ec);
+        return new Template(Fragments.fromNodes(true, false, ...nodes), ec);
     }
 
     static fromNode(node, ec) {
-        return new Template(dom.fragmentFromNodes(true, true, node), ec);
+        return new Template(Fragments.fromNodes(true, true, node), ec);
     }
 
     static fromSelector(selector, ec) {
         const node = document.querySelector(selector);
-        return new Template(dom.fragmentFromNodes(true, true, node), ec);
+        return new Template(Fragments.fromNodes(true, true, node), ec);
     }
 
     static render(fragment, ec, ...data) {
