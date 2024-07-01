@@ -112,13 +112,13 @@ describe('Template', () => {
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
     });
-    it('rendering null text from a text node yield empty string', () => {
+    it('rendering null text from an html node yield empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div>bd</div>');
     });    
-    it('rendering undefined text from a text node yield empty string', () => {
+    it('rendering undefined text from an html node yield empty string', () => {
         let data = {a: undefined};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
         let rendered = template.render(data);

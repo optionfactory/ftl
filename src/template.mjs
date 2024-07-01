@@ -1,6 +1,6 @@
 /* global NodeFilter, Node, DocumentFragment */
 import { Fragments } from "./fragments.mjs";
-import { ExpressionEvaluator,  TextNodeExpressionEvaluator} from "./expressions.mjs";
+import { ExpressionEvaluator, TextNodeExpressionEvaluator } from "./expressions.mjs";
 
 function createNodeFilter(dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) {
     const attributePrefix = `data-${dataPrefix}-`;
@@ -23,14 +23,10 @@ class NodeOperations {
     }
 
     remove(node) {
-        if ('innerHTML' in node) {
-            node.innerHTML = '';
-        }
-        if ('dataset' in node) {
-            Object.keys(node.dataset)
-                .filter(k => k.startsWith(this.prefix))
-                .forEach(k => delete node.dataset[k]);
-        }
+        node.replaceChildren?.();
+        Object.keys(node.dataset || {})
+            .filter(k => k.startsWith(this.prefix))
+            .forEach(k => delete node.dataset[k]);
         this.forRemoval.push(node);
     }
 
@@ -67,7 +63,6 @@ class NodeOperations {
     }
 }
 
-
 class TplCommandsHandler {
 
     dataPrefix() {
@@ -79,14 +74,14 @@ class TplCommandsHandler {
     }
 
     tplIf(template, node, value, ops, ...data) {
-        const accept = template.evaluator.evaluate(value, ...data);
+        const accept = template.ec.evaluator.evaluate(value, ...data);
         if (!accept) {
             ops.remove(node);
         }
     }
 
     tplWith(template, node, value, ops, ...data) {
-        const evaluated = template.evaluator.evaluate(value, ...data);
+        const evaluated = template.ec.evaluator.evaluate(value, ...data);
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
         const newNode = template.withNode(node).render(...data, varName ? { [varName]: evaluated } : evaluated);
         ops.replace(node, [newNode]);
@@ -94,7 +89,7 @@ class TplCommandsHandler {
 
     tplEach(template, node, value, ops, ...data) {
         const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
-        const evaluated = template.evaluator.evaluate(value, ...data);
+        const evaluated = template.ec.evaluator.evaluate(value, ...data);
         const nodes = evaluated.map(v => {
             return template.withNode(node).render(...data, varName ? { [varName]: v } : v);
         });
@@ -107,7 +102,7 @@ class TplCommandsHandler {
                 ops.replaceAndEvaluate(node, node.childNodes);
                 break;
             case 'body':
-                node.innerHTML = '';
+                node.replaceChildren();
                 break;
             case 'all':
                 ops.remove(node);
@@ -116,32 +111,31 @@ class TplCommandsHandler {
     }
 
     tplText(template, node, value, ops, ...data) {
-        const text = template.evaluator.evaluate(value, ...data);
+        const text = template.ec.evaluator.evaluate(value, ...data);
         const newNode = node.cloneNode();
-        newNode.innerHTML = "";
-        newNode.textContent = text;
+        newNode.replaceChildren(text === null || text === undefined ? "" : text);
         ops.replace(node, [newNode]);
     }
 
     tplValue(template, node, value, ops, ...data) {
-        node.value = template.evaluator.evaluate(value, ...data);
+        node.value = template.ec.evaluator.evaluate(value, ...data);
     }
 
     tplHtml(template, node, value, ops, ...data) {
-        const html = template.evaluator.evaluate(value, ...data);
+        const html = template.ec.evaluator.evaluate(value, ...data);
         const newNode = node.cloneNode();
         newNode.innerHTML = html === null || html === undefined ? "" : html;
         ops.replace(node, [newNode]);
     }
 
     tplClassAppend(template, node, value, ops, ...data) {
-        const classes = template.evaluator.evaluate(value, ...data);
+        const classes = template.ec.evaluator.evaluate(value, ...data);
         const classesAsArray = Array.isArray(classes) ? classes : [classes];
         node.classList.add(...classesAsArray);
     }
 
     tplAttrAppend(template, node, value, ops, ...data) {
-        const attributesAndValues = template.evaluator.evaluate(value, ...data);
+        const attributesAndValues = template.ec.evaluator.evaluate(value, ...data);
         if (attributesAndValues.length === 0) {
             return;
         }
@@ -152,11 +146,11 @@ class TplCommandsHandler {
     }
 
     textNode(template, node, value, ops, ...data) {
-        const nodes = template.textNodeEvaluator.evaluate(value, ...data)
+        const nodes = template.ec.textNodeEvaluator.evaluate(value, ...data)
             .map(v => {
                 switch (v.t) {
                     case 't': return document.createTextNode(v.v === null || v.v === undefined ? "" : v.v);
-                    case 'h': return Fragments.fromHtml(v.v);
+                    case 'h': return Fragments.fromHtml(v.v === null || v.v === undefined ? "" : v.v);
                     case 'n': return v.v;
                 }
             });
@@ -168,26 +162,26 @@ TplCommandsHandler.DATA_PREFIX = 'tpl';
 TplCommandsHandler.COMMANDS = ['tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'];
 
 class EvaluationContext {
-    constructor({evaluator, textNodeEvaluator, commandsHandler }){
+    constructor({ evaluator, textNodeEvaluator, commandsHandler }) {
         this.evaluator = evaluator;
         this.textNodeEvaluator = textNodeEvaluator;
         this.commandsHandler = commandsHandler;
     }
-    withModule(name, functions){
+    withModule(name, functions) {
         const fns = {
             ...this.evaluator.functions,
             [name]: functions,
         };
         return EvaluationContext.configure(fns);
     }
-    withModules(functions){
+    withModules(functions) {
         const fns = {
             ...this.evaluator.functions,
             ...functions,
         };
         return EvaluationContext.configure(fns);
     }
-    static configure(functions){
+    static configure(functions) {
         const ee = new ExpressionEvaluator(functions);
         const tnee = new TextNodeExpressionEvaluator(ee);
         const ch = new TplCommandsHandler();
@@ -195,117 +189,115 @@ class EvaluationContext {
             evaluator: ee,
             textNodeEvaluator: tnee,
             commandsHandler: ch
-        });        
+        });
     }
 }
 
 class Template {
+    /**
+     * 
+     * @param {string} html 
+     * @param {EvaluationContext} ec 
+     * @returns the template
+     */
     static fromHtml(html, ec) {
         return new Template(Fragments.fromHtml(html), ec);
     }
-    
-    static fromNodes(nodes, ec) {
-        return new Template(Fragments.fromNodes(true, false, ...nodes), ec);
-    }
 
-    static fromNode(node, ec) {
-        return new Template(Fragments.fromNodes(true, true, node), ec);
-    }
-
+    /**
+     * 
+     * @param {string} selector for an HTMLTemplateElement
+     * @param {EvaluationContext} ec 
+     * @returns the template
+     */
     static fromSelector(selector, ec) {
-        const node = document.querySelector(selector);
-        return new Template(Fragments.fromNodes(true, true, node), ec);
+        const templateEl = document.querySelector(selector);
+        const fragment = templateEl.content.cloneNode(true);
+        return new Template(fragment, ec);
     }
 
-    static render(fragment, ec, ...data) {
-        return new Template(fragment, ec).render(...data);
+    /**
+     * 
+     * @param {HTMLTemplateElement} templateEl 
+     * @param {EvaluationContext} ec 
+     * @returns the template
+     */
+    static fromTemplate(templateEl, ec) {
+        const fragment = templateEl.content.cloneNode(true);
+        return new Template(fragment, ec);
     }
 
-    static renderTo(fragment, ec, el, ...data) {
-        return new Template(fragment, ec).renderTo(el, ...data);
+    /**
+     * 
+     * @param {DocumentFragment} fragment 
+     * @param {EvaluationContext} ec 
+     * @returns the template
+     */
+    static fromFragment(fragment, ec) {
+        return new Template(fragment.cloneNode(true), ec);
     }
 
-    static renderToSelector(fragment, ec, selector, ...data) {
-        return new Template(fragment, ec).renderToSelector(selector, ...data);
-    }
-
-    static appendTo(fragment, ec, el, ...data) {
-        return new Template(fragment, ec).appendTo(el, ...data);
-    }
-
-    static appendToSelector(fragment, ec, selector, ...data) {
-        return new Template(fragment, ec).appendToSelector(selector, ...data);
-    }
-
-    constructor(fragment, { evaluator, textNodeEvaluator, commandsHandler }) {
+    constructor(fragment, ec) {
         this.fragment = fragment;
-        this.evaluator = evaluator;
-        this.textNodeEvaluator = textNodeEvaluator;
-        this.commandsHandler = commandsHandler || new TplCommandsHandler();
+        this.ec = ec;
     }
     withNode(node) {
-        const evaluator = this.evaluator;
-        const textNodeEvaluator = this.textNodeEvaluator;
-        const commandsHandler = this.commandsHandler;
-        return Template.fromNode(node, { evaluator, textNodeEvaluator, commandsHandler });
+        const fragment = new DocumentFragment();
+        fragment.appendChild(node.cloneNode(true));
+        return new Template(fragment, this.ec);
     }
-
-    _render(...data) {
-        const dataPrefix = this.commandsHandler.dataPrefix();
-        const ops = new NodeOperations(dataPrefix);
-        const fragment = this.fragment.cloneNode(true);
-        const nodeFilter = createNodeFilter(dataPrefix, "{{", "}}");
-        const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
-        let node;
-        while ((node = iterator.nextNode()) !== null) {
-            let clonedNode = node.cloneNode();
-            ops.cleanup();
-            if (node.nodeType === Node.TEXT_NODE) {
-                try {
-                    this.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
-                } catch (ex) {
-                    throw new RenderError(ex.message, clonedNode, ex);
-                }
-                continue;
-            }
-            const commands = this.commandsHandler.orderedCommands();
-            for (let i = 0; i !== commands.length; ++i) {
-                const command = commands[i];
-                if (!(command in node.dataset)) {
-                    continue;
-                }
-                const value = ops.popData(node, command);
-                try {
-                    this.commandsHandler[command](this, node, value, ops, ...data);
-                } catch (ex) {
-                    throw new RenderError(ex.message, clonedNode, ex);
-                }
-            }
-            Object.keys(node.dataset)
-                .filter(k => k.startsWith(this.commandsHandler.dataPrefix()))
-                .map(k => [k, k.substring(this.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
-                .forEach(([dataSetKey, attributeName]) => {
-                    const expression = ops.popData(node, dataSetKey);
-                    const evaluated = this.evaluator.evaluate(expression, ...data);
-                    node.setAttribute(attributeName, evaluated);
-                });
-        }
-        ops.cleanup();
-        return fragment;
-    }
-
     render(...data) {
         try {
-            return this._render(...data);
+            const dataPrefix = this.ec.commandsHandler.dataPrefix();
+            const ops = new NodeOperations(dataPrefix);
+            const fragment = this.fragment.cloneNode(true);
+            const nodeFilter = createNodeFilter(dataPrefix, "{{", "}}");
+            const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
+            let node;
+            while ((node = iterator.nextNode()) !== null) {
+                let clonedNode = node.cloneNode();
+                ops.cleanup();
+                if (node.nodeType === Node.TEXT_NODE) {
+                    try {
+                        this.ec.commandsHandler.textNode(this, node, node.nodeValue, ops, ...data);
+                    } catch (ex) {
+                        throw new RenderError(ex.message, clonedNode, ex);
+                    }
+                    continue;
+                }
+                const commands = this.ec.commandsHandler.orderedCommands();
+                for (let i = 0; i !== commands.length; ++i) {
+                    const command = commands[i];
+                    if (!(command in node.dataset)) {
+                        continue;
+                    }
+                    const value = ops.popData(node, command);
+                    try {
+                        this.ec.commandsHandler[command](this, node, value, ops, ...data);
+                    } catch (ex) {
+                        throw new RenderError(ex.message, clonedNode, ex);
+                    }
+                }
+                Object.keys(node.dataset || {})
+                    .filter(k => k.startsWith(this.ec.commandsHandler.dataPrefix()))
+                    .map(k => [k, k.substring(this.ec.commandsHandler.dataPrefix().length).split(/(?=[A-Z])/).join('-').toLowerCase()])
+                    .forEach(([dataSetKey, attributeName]) => {
+                        const expression = ops.popData(node, dataSetKey);
+                        const evaluated = this.ec.evaluator.evaluate(expression, ...data);
+                        node.setAttribute(attributeName, evaluated);
+                    });
+            }
+            ops.cleanup();
+            return fragment;
         } catch (ex) {
             throw new RenderError(ex.message, this.fragment, ex)
         }
     }
 
+
     renderTo(el, ...data) {
-        let fragment = this.render(...data);
-        el.innerHTML = '';
-        el.appendChild(fragment);
+        const fragment = this.render(...data);
+        el.replaceChildren(fragment);
     }
 
     renderToSelector(selector, ...data) {
@@ -314,7 +306,7 @@ class Template {
     }
 
     appendTo(el, ...data) {
-        let fragment = this.render(...data);
+        const fragment = this.render(...data);
         el.appendChild(fragment);
     }
 
