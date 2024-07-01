@@ -212,7 +212,7 @@ class Template {
      */
     static fromSelector(selector, ec) {
         const templateEl = document.querySelector(selector);
-        const fragment = templateEl.content.cloneNode(true);
+        const fragment = templateEl.content;
         return new Template(fragment, ec);
     }
 
@@ -223,7 +223,7 @@ class Template {
      * @returns the template
      */
     static fromTemplate(templateEl, ec) {
-        const fragment = templateEl.content.cloneNode(true);
+        const fragment = templateEl.content;
         return new Template(fragment, ec);
     }
 
@@ -234,7 +234,7 @@ class Template {
      * @returns the template
      */
     static fromFragment(fragment, ec) {
-        return new Template(fragment.cloneNode(true), ec);
+        return new Template(fragment, ec);
     }
 
     constructor(fragment, ec) {
