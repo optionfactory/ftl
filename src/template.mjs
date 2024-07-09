@@ -284,7 +284,15 @@ class Template {
                     .forEach(([dataSetKey, attributeName]) => {
                         const expression = ops.popData(node, dataSetKey);
                         const evaluated = this.ec.evaluator.evaluate(expression, ...data);
-                        node.setAttribute(attributeName, evaluated);
+                        if (typeof evaluated !== 'boolean') {
+                            node.setAttribute(attributeName, evaluated);
+                            return;
+                        }
+                        if (evaluated) {
+                            node.setAttribute(attributeName, attributeName);
+                        } else {
+                            node.removeAttribute(attributeName);
+                        }
                     });
             }
             ops.cleanup();
