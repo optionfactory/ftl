@@ -212,6 +212,18 @@ renders to
 <p style="color: green">To be colored</p>
 ```
 
+boolean values are rendered as boolean attributes
+
+```html
+    <input data-tpl-readonly="true">
+```
+renders to
+```html
+    <input readonly="readonly">
+```
+
+
+
 ## Expression evaluation
 ### Object navigation
 ```javascript
