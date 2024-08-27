@@ -110,7 +110,7 @@
                 poorCar: "Mazda"
             };
             let ec = ftl.EvaluationContext.configure(functions);
-            let template = ftl.Template.fromNode(document.querySelector("[data-ref=template]").content, ec);            
+            let template = ftl.Template.fromSelector("[data-ref=template]", ec);            
             template.renderTo(document.querySelector("[data-ref=target]"), data);
             
         </script>

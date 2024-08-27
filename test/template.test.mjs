@@ -207,10 +207,7 @@ describe('Template', () => {
         try {
             template.render(data)
         } catch (ex) {
-            const expected = 'Method missing "boom"\n'
-                + '\t--> {{self.boom()}}\n'
-                + '\t--> <div>{{self.boom()}}</div>\n'
-                + '\t--> <div data-tpl-each="self"></div>';
+            const expected = 'Error rendering template in <div id="container"></div>';
             assert.strictEqual(ex.message, expected);
 
         }
