@@ -1,5 +1,4 @@
 import { parse } from "./expressions-parser.peggy";
-import { parse as parseTextNode } from "./expressions-textnode-parser.peggy";
 
 class EvaluatingVisitor {
     constructor(dataStack, functions) {
@@ -109,7 +108,6 @@ class EvaluatingVisitor {
         const args = node.args.map(arg => this.visit(arg));
         return [fn.apply(scope, args)];
     }
-    //
     visit(node, ...args) {
         return this[node.type](node, ...args);
     }
@@ -120,7 +118,7 @@ class ExpressionEvaluator {
         this.functions = functions || {};
     }
     parse(expression) {
-        return parse(expression);
+        return parse(expression, { startRule: 'ExpressionRoot'});
     }
     evaluateAst(ast, dataStack) {
         return new EvaluatingVisitor(dataStack, this.functions).visit(ast);
@@ -128,32 +126,23 @@ class ExpressionEvaluator {
     evaluate(expression, ...data) {
         return this.evaluateAst(this.parse(expression), data);
     }
-}
-
-class TextNodeExpressionEvaluator {
-    constructor(evaluator) {
-        this.evaluator = evaluator;
+    parseTemplated(expression) {
+        return parse(expression, { startRule: 'TemplatedRoot'});
     }
-    parse(expression) {
-        return parseTextNode(expression).map(node => node.t === 't' ? node : {
-            t: node.t,
-            v: this.evaluator.parse(node.v)
-        });
-    }
-    evaluateAst(ast, dataStack) {
+    evaluateTemplatedAst(ast, dataStack) {
+        const ev = new EvaluatingVisitor(dataStack, this.functions);
         return ast.map(node => {
-            switch(node.t){
-                case 't': return node;
-                case 'te': return {t: 't', v: this.evaluator.evaluateAst(node.v, dataStack)};
-                case 'he': return {t: 'h', v: this.evaluator.evaluateAst(node.v, dataStack)};
-                case 'ne': return {t: 'n', v: this.evaluator.evaluateAst(node.v, dataStack)};
+            switch(node.type){
+                case 'tel': return {type: 't', value: node.value};
+                case 'tet': return {type: 't', value: ev.visit(node.value)};
+                case 'teh': return {type: 'h', value: ev.visit(node.value)};
+                case 'ten': return {type: 'n', value: ev.visit(node.value)};
             }
         });
     }
-    evaluate(expression, ...data) {
-        return this.evaluateAst(this.parse(expression), data);
-    }
+    evaluateTemplated(expression, ...data) {
+        return this.evaluateTemplatedAst(this.parseTemplated(expression), data);
+    }    
 }
 
-
-export { ExpressionEvaluator, TextNodeExpressionEvaluator };
+export { ExpressionEvaluator };

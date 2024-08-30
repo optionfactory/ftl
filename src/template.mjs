@@ -1,6 +1,6 @@
 /* global NodeFilter, Node, DocumentFragment */
 import { Fragments } from "./fragments.mjs";
-import { ExpressionEvaluator, TextNodeExpressionEvaluator } from "./expressions.mjs";
+import { ExpressionEvaluator } from "./expressions.mjs";
 
 const createNodeFilter = (dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) => {
     const attributePrefix = `data-${dataPrefix}-`;
@@ -135,12 +135,12 @@ class TplCommandsHandler {
         });
     }
     textNode(template, node, expression, ops) {
-        const nodes = template.evaluateText(expression)
+        const nodes = template.evaluateTemplated(expression)
             .map(v => {
-                switch (v.t) {
-                    case 't': return document.createTextNode(v.v === null || v.v === undefined ? "" : v.v);
-                    case 'h': return Fragments.fromHtml(v.v === null || v.v === undefined ? "" : v.v);
-                    case 'n': return v.v;
+                switch (v.type) {
+                    case 't': return document.createTextNode(v.value === null || v.value === undefined ? "" : v.value);
+                    case 'h': return Fragments.fromHtml(v.value === null || v.value === undefined ? "" : v.value);
+                    case 'n': return v.value;
                 }
             });
         ops.replace(node, nodes);
@@ -225,14 +225,12 @@ class Template {
     #fragment;
     #ec;
     #expressionEvaluator;
-    #textExpressionEvaluator;
     #commandsHandler;
     #data;
     constructor(fragment, ec, ...data) {
         this.#fragment = fragment;
         this.#ec = ec;
         this.#expressionEvaluator = new ExpressionEvaluator(ec.functions);
-        this.#textExpressionEvaluator = new TextNodeExpressionEvaluator(this.#expressionEvaluator);
         this.#commandsHandler = new TplCommandsHandler();
         this.#data = data;
     }
@@ -245,8 +243,8 @@ class Template {
     evaluate(expression) {
         return this.#expressionEvaluator.evaluate(expression, ...this.#data);
     }
-    evaluateText(expression) {
-        return this.#textExpressionEvaluator.evaluate(expression, ...this.#data);
+    evaluateTemplated(expression) {
+        return this.#expressionEvaluator.evaluateTemplated(expression, ...this.#data);
     }
     render(...data) {
         const tpl = this.withData(...data);

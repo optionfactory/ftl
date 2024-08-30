@@ -2,7 +2,31 @@
 
 }}
 
-Root 
+TemplatedRoot = TemplatedExpression*
+
+TemplatedExpression = value:(BeginNode @ExpressionRoot EndNode) { return {type:'ten', value}}
+	/ value:(BeginHtml @ExpressionRoot EndHtml) { return {type:'teh', value}}
+	/ value:(BeginText @ExpressionRoot EndText) { return {type:'tet', value}} 
+	/ value:TemplatedText { return {type:'tel', value}}
+
+BeginNode = '{{{{'
+EndNode = '}}}}'	
+BeginHtml = '{{{'
+EndHtml = '}}}'
+BeginText = '{{'
+EndText = '}}'
+
+TemplatedText
+    = v:(
+        '\\'@'{'
+        / ('\\'@'}')
+        / @[^{}] 
+        / @'{' !'{' 
+        / @'}' !'}'
+    )+ { return v.join(""); }
+
+
+ExpressionRoot
     = _ r:Expression _ { return r; }
 
 Expression = TernaryExpression
@@ -135,3 +159,4 @@ RelationalOp
 
 _ "whitespaces"
     = [ \t\n\r]*
+
