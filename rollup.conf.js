@@ -12,7 +12,7 @@ class RollupPeggyWithSourceMap {
             return null;
         }
         const generated = generate(grammar, {
-            allowedStartRules: ['TemplatedRoot','ExpressionRoot'],
+            allowedStartRules: ['TemplatedRoot', 'ExpressionRoot'],
             output: 'source-and-map',
             grammarSource: id,
             format: 'es',

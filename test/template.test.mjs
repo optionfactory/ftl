@@ -209,7 +209,6 @@ describe('Template', () => {
         } catch (ex) {
             const expected = 'Error rendering template in <div id="container"></div>';
             assert.strictEqual(ex.message, expected);
-
         }
     });
 
