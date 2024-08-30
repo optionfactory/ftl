@@ -27,7 +27,7 @@
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^15.2.3",
         "jsdom": "^23.0.1",
-        "peggy": "^3.0.2",
+        "peggy": "^4.0.3",
         "rollup-plugin-terser": "7.0.2",
         "terser": "^5.26.0"
     }

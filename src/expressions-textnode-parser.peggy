@@ -1,6 +1,6 @@
-Root = Expression*
+TemplatedRoot = TemplatedExpression*
 
-Expression = v:(BeginNode @Other EndNode) { return {t:'ne', v}}
+TemplatedExpression = v:(BeginNode @Other EndNode) { return {t:'ne', v}}
 	/ v:(BeginHtml @Other EndHtml) { return {t:'he', v}}
 	/ v:(BeginText @Other EndText) { return {t:'te', v}} 
 	/ v:Other { return {t:'t', v}}
