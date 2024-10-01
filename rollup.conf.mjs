@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
-import { terser } from "rollup-plugin-terser";
+import terser from "@rollup/plugin-terser";
 import { createFilter } from '@rollup/pluginutils';
-import { generate } from 'peggy';
+import peggy from 'peggy';
 
 
 class RollupPeggyWithSourceMap {
@@ -11,7 +11,7 @@ class RollupPeggyWithSourceMap {
         if (!filter(id)) {
             return null;
         }
-        const generated = generate(grammar, {
+        const generated = peggy.generate(grammar, {
             allowedStartRules: ['TemplatedRoot', 'ExpressionRoot'],
             output: 'source-and-map',
             grammarSource: id,

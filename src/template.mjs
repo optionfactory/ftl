@@ -155,14 +155,14 @@ class EvaluationContext {
     }
     withModule(name, functions) {
         const fns = {
-            ...this.evaluator.functions,
+            ...this.#functions,
             [name]: functions,
         };
         return EvaluationContext.configure(fns);
     }
     withModules(functions) {
         const fns = {
-            ...this.evaluator.functions,
+            ...this.#functions,
             ...functions,
         };
         return EvaluationContext.configure(fns);
@@ -196,6 +196,9 @@ class Template {
      */
     static fromSelector(selector, ec, ...data) {
         const templateEl = document.querySelector(selector);
+        if(!(templateEl instanceof HTMLTemplateElement)){
+            throw new Error("template selector does not match any template tag");
+        }
         const fragment = templateEl.content;
         return new Template(fragment, ec, ...data);
     }

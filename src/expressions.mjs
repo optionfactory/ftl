@@ -32,6 +32,8 @@ class EvaluatingVisitor {
                 return lhs >= rhs;
             case "<=":
                 return lhs <= rhs;
+            default:
+                throw new Error("unknown cmp op " + node.op);
         }   
     }
     call(node) {
@@ -137,6 +139,7 @@ class ExpressionEvaluator {
                 case 'tet': return {type: 't', value: ev.visit(node.value)};
                 case 'teh': return {type: 'h', value: ev.visit(node.value)};
                 case 'ten': return {type: 'n', value: ev.visit(node.value)};
+                default: throw new Error("unknown node type " + node.type);
             }
         });
     }
