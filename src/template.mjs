@@ -140,7 +140,7 @@ class TplCommandsHandler {
                 switch (v.type) {
                     case 't': return document.createTextNode(v.value === null || v.value === undefined ? "" : v.value);
                     case 'h': return Fragments.fromHtml(v.value === null || v.value === undefined ? "" : v.value);
-                    case 'n': return v.value;
+                    case 'n': return v.value === null || v.value === undefined ? new DocumentFragment() : v.value;
                 }
             });
         ops.replace(node, nodes);
