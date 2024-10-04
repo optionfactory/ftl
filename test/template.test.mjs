@@ -112,6 +112,24 @@ describe('Template', () => {
         let rendered = template.render(data);
         assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
     });
+    it('can render html from a node', () => {
+        let data = {a: document.createElement("span")};
+        let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
+    });
+    it('null node is rendered as an empty fragment', () => {
+        let data = {a: null};
+        let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });
+    it('null node is rendered as an empty fragment', () => {
+        let data = {};
+        let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", ec);
+        let rendered = template.render(data);
+        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+    });
     it('rendering null text from an html node yield empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", ec);
