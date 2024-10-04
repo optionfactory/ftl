@@ -29,6 +29,6 @@
         "@rollup/plugin-node-resolve": "^15.3.0",
         "@rollup/plugin-terser": "^0.4.4",
         "jsdom": "^25.0.1",
-        "peggy": "^4.0.3"
+        "peggy": "^4.1.1"
     }
 }
