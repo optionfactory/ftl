@@ -335,7 +335,7 @@ class RenderError extends Error {
     }
     static #cleanup(cloned) {
         if (cloned.nodeType === Node.TEXT_NODE) {
-            cloned.nodeValue = child.nodeValue.trim();
+            cloned.nodeValue = cloned.nodeValue.trim();
         }        
         for (var n = 0; n < cloned.childNodes.length; n++) {
             var child = cloned.childNodes[n];
