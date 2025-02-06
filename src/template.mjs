@@ -324,7 +324,7 @@ class Template {
 
 class RenderError extends Error {
     constructor(message, nodeOrFragment, cause) {
-        super(`${message} in ${RenderError.stringify(nodeOrFragment)}`, { cause });
+        super(`${message} in \`${RenderError.stringify(nodeOrFragment)}\``, { cause });
         this.name = "RenderError";
         this.node = nodeOrFragment;
     }
@@ -334,6 +334,9 @@ class RenderError extends Error {
         return t.innerHTML;
     }
     static #cleanup(cloned) {
+        if (cloned.nodeType === Node.TEXT_NODE) {
+            cloned.nodeValue = child.nodeValue.trim();
+        }        
         for (var n = 0; n < cloned.childNodes.length; n++) {
             var child = cloned.childNodes[n];
             if (child.nodeType === Node.TEXT_NODE) {

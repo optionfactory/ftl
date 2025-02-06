@@ -227,7 +227,22 @@ describe('Template', () => {
         try {
             template.render(data)
         } catch (ex) {
-            const expected = 'Error rendering template in <div id="container"><span>something ignored</span><div data-tpl-each="self">{{self.boom()}}</div></div>';
+            const expected = 'Error rendering template in `<div id="container"><span>something ignored</span><div data-tpl-each="self">{{self.boom()}}</div></div>`';
+            assert.strictEqual(ex.message, expected);
+        }
+    });
+    it('can show error for text nodes', () => {
+        let data = [1, 2];
+        let template = Template.fromHtml(`
+
+            {{self.boom()}}
+
+        `
+            , ec);
+        try {
+            template.render(data)
+        } catch (ex) {
+            const expected = 'Error rendering template in `{{self.boom()}}`';
             assert.strictEqual(ex.message, expected);
         }
     });

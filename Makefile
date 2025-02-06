@@ -1,4 +1,5 @@
 build:
+	npm update
 	npm run build
 test: build 
 	npm run test
