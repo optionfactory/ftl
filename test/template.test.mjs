@@ -225,7 +225,7 @@ describe('Template', () => {
         try {
             template.render(data)
         } catch (ex) {
-            const expected = 'Error rendering template in <div id="container"></div>';
+            const expected = 'Error rendering template in <div id="container"><span>something ignored</span><div data-tpl-each="self">{{self.boom()}}</div></div>';
             assert.strictEqual(ex.message, expected);
         }
     });

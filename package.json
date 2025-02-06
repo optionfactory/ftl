@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "0.26.0",
+    "version": "0.27.0",
     "main": "./dist/ftl.iife.js",
     "module": "./dist/ftl.mjs",
     "files": [
@@ -26,9 +26,9 @@
         "build": "npx rollup --config rollup.conf.mjs"
     },
     "devDependencies": {
-        "@rollup/plugin-node-resolve": "^15.3.0",
+        "@rollup/plugin-node-resolve": "^16.0.0",
         "@rollup/plugin-terser": "^0.4.4",
-        "jsdom": "^25.0.1",
-        "peggy": "^4.1.1"
+        "jsdom": "^26.0.0",
+        "peggy": "^4.2.0"
     }
 }

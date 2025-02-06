@@ -196,7 +196,7 @@ class Template {
      */
     static fromSelector(selector, ec, ...data) {
         const templateEl = document.querySelector(selector);
-        if(!(templateEl instanceof HTMLTemplateElement)){
+        if (!(templateEl instanceof HTMLTemplateElement)) {
             throw new Error("template selector does not match any template tag");
         }
         const fragment = templateEl.content;
@@ -324,16 +324,30 @@ class Template {
 
 class RenderError extends Error {
     constructor(message, nodeOrFragment, cause) {
-        const node = nodeOrFragment instanceof DocumentFragment
-            ? nodeOrFragment.firstElementChild
-            : nodeOrFragment;
-        const t = document.createElement("template");
-        t.content.appendChild(node.cloneNode(false));
-        const repr =  t.innerHTML;
-        super(`${message} in ${repr}`, { cause });
+        super(`${message} in ${RenderError.stringify(nodeOrFragment)}`, { cause });
         this.name = "RenderError";
         this.node = nodeOrFragment;
     }
+    static stringify(nodeOrFragment) {
+        const t = document.createElement("template");
+        t.content.appendChild(RenderError.#cleanup(nodeOrFragment.cloneNode(true)));
+        return t.innerHTML;
+    }
+    static #cleanup(cloned) {
+        for (var n = 0; n < cloned.childNodes.length; n++) {
+            var child = cloned.childNodes[n];
+            if (child.nodeType === 3 && !/\S/.test(child.nodeValue)) {
+                cloned.removeChild(child);
+                n--;
+            }
+            else if (child.nodeType === 1) {
+                RenderError.#cleanup(child);
+            }
+        }
+        return cloned;
+    }
 }
+
+
 
 export { Template, TplCommandsHandler, EvaluationContext };
