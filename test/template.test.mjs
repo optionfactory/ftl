@@ -219,7 +219,9 @@ describe('Template', () => {
         let data = [1, 2];
         let template = Template.fromHtml(`<div id="container">
                     <span>something ignored</span>
-                    <div data-tpl-each="self">{{self.boom()}}</div>
+                    <div data-tpl-each="self">  
+                        {{self.boom()}}
+                    </div>
                 </div>`
             , ec);
         try {

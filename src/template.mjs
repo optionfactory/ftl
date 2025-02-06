@@ -336,11 +336,14 @@ class RenderError extends Error {
     static #cleanup(cloned) {
         for (var n = 0; n < cloned.childNodes.length; n++) {
             var child = cloned.childNodes[n];
-            if (child.nodeType === 3 && !/\S/.test(child.nodeValue)) {
-                cloned.removeChild(child);
-                n--;
+            if (child.nodeType === Node.TEXT_NODE) {
+                child.nodeValue = child.nodeValue.trim();
+                if(child.nodeValue.length === 0){
+                    cloned.removeChild(child);
+                    n--;
+                }
             }
-            else if (child.nodeType === 1) {
+            else if (child.nodeType === Node.ELEMENT_NODE) {
                 RenderError.#cleanup(child);
             }
         }
