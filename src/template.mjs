@@ -288,7 +288,9 @@ class Template {
                         const expression = ops.popData(node, dataSetKey);
                         const evaluated = tpl.evaluate(expression);
                         if (typeof evaluated !== 'boolean') {
-                            node.setAttribute(attributeName, evaluated);
+                            if(evaluated !== null && evaluated !== undefined){
+                                node.setAttribute(attributeName, evaluated);
+                            }
                             return;
                         }
                         if (evaluated) {
