@@ -258,13 +258,12 @@ class Template {
             const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
             let node;
             while ((node = iterator.nextNode()) !== null) {
-                let clonedNode = node.cloneNode();
                 ops.cleanup();
                 if (node.nodeType === Node.TEXT_NODE) {
                     try {
                         tpl.#commandsHandler.textNode(tpl, node, node.nodeValue, ops);
                     } catch (ex) {
-                        throw new RenderError("Error evaluating text node", clonedNode, ex);
+                        throw new RenderError("Error evaluating text node", node, ex);
                     }
                     continue;
                 }
@@ -278,7 +277,7 @@ class Template {
                     try {
                         tpl.#commandsHandler[command](tpl, node, value, ops);
                     } catch (ex) {
-                        throw new RenderError(`Error evaluating command ${command}`, clonedNode, ex);
+                        throw new RenderError(`Error evaluating command ${command}`, node, ex);
                     }
                 }
                 Object.keys(node.dataset || {})
@@ -328,23 +327,23 @@ class RenderError extends Error {
     constructor(message, nodeOrFragment, cause) {
         super(`${message} in \`${RenderError.stringify(nodeOrFragment)}\``, { cause });
         this.name = "RenderError";
-        this.node = nodeOrFragment;
+        this.node = nodeOrFragment.cloneNode(true);
     }
     static stringify(nodeOrFragment) {
         const t = document.createElement("template");
         t.content.appendChild(RenderError.#cleanup(nodeOrFragment.cloneNode(true)));
         return t.innerHTML;
     }
-    static #cleanup(cloned) {
-        if (cloned.nodeType === Node.TEXT_NODE) {
-            cloned.nodeValue = cloned.nodeValue.trim();
+    static #cleanup(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            node.nodeValue = node.nodeValue.trim();
         }        
-        for (var n = 0; n < cloned.childNodes.length; n++) {
-            var child = cloned.childNodes[n];
+        for (var n = 0; n < node.childNodes.length; n++) {
+            var child = node.childNodes[n];
             if (child.nodeType === Node.TEXT_NODE) {
                 child.nodeValue = child.nodeValue.trim();
                 if(child.nodeValue.length === 0){
-                    cloned.removeChild(child);
+                    node.removeChild(child);
                     n--;
                 }
             }
@@ -352,7 +351,7 @@ class RenderError extends Error {
                 RenderError.#cleanup(child);
             }
         }
-        return cloned;
+        return node;
     }
 }
 
