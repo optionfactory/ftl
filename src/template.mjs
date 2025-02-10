@@ -253,7 +253,7 @@ class Template {
         const tpl = this.withData(...data);
         try {
             const ops = new NodeOperations(TplCommandsHandler.DATA_PREFIX);
-            const fragment = tpl.#fragment.cloneNode(true);
+            const fragment = document.importNode(tpl.#fragment, true);
             const nodeFilter = createNodeFilter(TplCommandsHandler.DATA_PREFIX, "{{", "}}");
             const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
             let node;

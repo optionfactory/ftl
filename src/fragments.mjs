@@ -9,7 +9,7 @@ class Fragments {
     static fromHtml(html) {
         const el = document.createElement("template");
         el.innerHTML = html;
-        return el.content;
+        return document.adoptNode(el.content);
     }    
 }
 
