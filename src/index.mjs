@@ -1,3 +1,3 @@
-export { ExpressionEvaluator } from "./expressions.mjs";
-export { Template, TplCommandsHandler, EvaluationContext } from './template.mjs'
+export { Expressions } from "./expressions.mjs";
+export { Template } from './template.mjs'
 

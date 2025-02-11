@@ -1,10 +1,8 @@
-/* global DocumentFragment, HTMLTemplateElement */
-
 class Fragments {
     /**
      * 
      * @param  {string} html 
-     * @returns 
+     * @returns {DocumentFragment} the document fragment
      */
     static fromHtml(html) {
         const el = document.createElement("template");

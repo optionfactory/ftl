@@ -1,32 +1,16 @@
-/* global NodeFilter, Node, DocumentFragment */
 import { Fragments } from "./fragments.mjs";
-import { ExpressionEvaluator } from "./expressions.mjs";
+import { Expressions } from "./expressions.mjs";
 
-const createNodeFilter = (dataPrefix, textNodeExpressionStart, textNodeExpressionEnd) => {
-    const attributePrefix = `data-${dataPrefix}-`;
-    return (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            return node.nodeValue.includes(textNodeExpressionStart) && node.nodeValue.includes(textNodeExpressionEnd)
-                ? NodeFilter.FILTER_ACCEPT
-                : NodeFilter.FILTER_REJECT;
-        }
-        return Array.from(node.attributes).some(attr => attr.name.startsWith(attributePrefix))
-            ? NodeFilter.FILTER_ACCEPT
-            : NodeFilter.FILTER_SKIP;
-    };
-}
 
 class NodeOperations {
-    #prefix;
     #forRemoval;
-    constructor(prefix) {
-        this.#prefix = prefix;
+    constructor() {
         this.#forRemoval = [];
     }
     remove(node) {
         node.replaceChildren?.();
         Object.keys(node.dataset || {})
-            .filter(k => k.startsWith(this.#prefix))
+            .filter(k => k.startsWith('tpl'))
             .forEach(k => delete node.dataset[k]);
         this.#forRemoval.push(node);
     }
@@ -60,28 +44,27 @@ class NodeOperations {
     }
 }
 
-class TplCommandsHandler {
-    static DATA_PREFIX = 'tpl';
+class CommandsHandler {
     static ORDERED_COMMANDS = [
-        'tplIf', 'tplWith', 'tplEach', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'
+        'tplIf', 'tplWith', 'tplEach', 'tplWhen', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'
     ];
-    tplIf(template, node, expression, ops) {
+    static tplIf(template, node, expression, ops) {
         const accept = template.evaluate(expression);
         if (!accept) {
             ops.remove(node);
         }
     }
-    tplWith(template, node, expression, ops) {
+    static tplWith(template, node, expression, ops) {
         const evaluated = template.evaluate(expression);
-        const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
+        const varName = ops.popData(node, 'tplVar');
         const fragment = new DocumentFragment();
         //node needs to be cloned as it's used as a placeholder in ops.replace
         fragment.appendChild(node.cloneNode(true));
         const newNode = template.withFragment(fragment).render(varName ? { [varName]: evaluated } : evaluated);
         ops.replace(node, [newNode]);
     }
-    tplEach(template, node, expression, ops) {
-        const varName = ops.popData(node, TplCommandsHandler.DATA_PREFIX + 'Var');
+    static tplEach(template, node, expression, ops) {
+        const varName = ops.popData(node, 'tplVar');
         const evaluated = template.evaluate(expression);
         const fragment = new DocumentFragment();
         //node needs to be cloned as it's used as a placeholder in ops.replace
@@ -91,7 +74,13 @@ class TplCommandsHandler {
         });
         ops.replace(node, nodes);
     }
-    tplRemove(template, node, value, ops) {
+    static tplWhen(template, node, expression, ops) {
+        const accept = template.evaluate(expression);
+        if (!accept) {
+            ops.remove(node);
+        }
+    }
+    static tplRemove(template, node, value, ops) {
         switch (value.toLowerCase()) {
             case 'tag':
                 ops.replaceAndEvaluate(node, node.childNodes);
@@ -104,27 +93,27 @@ class TplCommandsHandler {
                 break;
         }
     }
-    tplText(template, node, expression, ops) {
+    static tplText(template, node, expression, ops) {
         const text = template.evaluate(expression);
         const newNode = node.cloneNode();
         newNode.replaceChildren(text === null || text === undefined ? "" : text);
         ops.replace(node, [newNode]);
     }
-    tplValue(template, node, expression, ops) {
+    static tplValue(template, node, expression, ops) {
         node.value = template.evaluate(expression);
     }
-    tplHtml(template, node, expression, ops) {
+    static tplHtml(template, node, expression, ops) {
         const html = template.evaluate(expression);
         const newNode = node.cloneNode();
         newNode.innerHTML = html === null || html === undefined ? "" : html;
         ops.replace(node, [newNode]);
     }
-    tplClassAppend(template, node, expression, ops) {
+    static tplClassAppend(template, node, expression, ops) {
         const classes = template.evaluate(expression);
         const classesAsArray = Array.isArray(classes) ? classes : [classes];
         node.classList.add(...classesAsArray);
     }
-    tplAttrAppend(template, node, expression, ops) {
+    static tplAttrAppend(template, node, expression, ops) {
         const attributesAndValues = template.evaluate(expression);
         if (attributesAndValues.length === 0) {
             return;
@@ -134,8 +123,8 @@ class TplCommandsHandler {
             node.setAttribute(k, v);
         });
     }
-    textNode(template, node, expression, ops) {
-        const nodes = template.evaluateTemplated(expression)
+    static textNode(template, node, expression, ops) {
+        const nodes = template.evaluate(expression, Expressions.MODE_TEMPLATED)
             .map(v => {
                 switch (v.type) {
                     case 't': return document.createTextNode(v.value === null || v.value === undefined ? "" : v.value);
@@ -147,147 +136,117 @@ class TplCommandsHandler {
     }
 }
 
-
-class EvaluationContext {
-    #functions;
-    constructor(functions) {
-        this.#functions = functions;
-    }
-    withModule(name, functions) {
-        const fns = {
-            ...this.#functions,
-            [name]: functions,
-        };
-        return EvaluationContext.configure(fns);
-    }
-    withModules(functions) {
-        const fns = {
-            ...this.#functions,
-            ...functions,
-        };
-        return EvaluationContext.configure(fns);
-    }
-    get functions() {
-        return this.#functions;
-    }
-    static configure(functions) {
-        return new EvaluationContext(functions);
-    }
-}
-
 class Template {
     /**
-     * 
-     * @param {string} html 
-     * @param {EvaluationContext} ec 
-     * @param {...*} data 
+     * @param {string} html
+     * @param {{ [k: string] : any }?} modules
+     * @param {...*} data
      * @returns the template
      */
-    static fromHtml(html, ec, ...data) {
-        return new Template(Fragments.fromHtml(html), ec, ...data);
+    static fromHtml(html, modules, ...data) {
+        return new Template(Fragments.fromHtml(html), modules, data);
     }
 
     /**
      * 
      * @param {string} selector for an HTMLTemplateElement
-     * @param {EvaluationContext} ec 
+     * @param {{ [k: string] : any }?} modules
      * @param {...*} data 
      * @returns the template
      */
-    static fromSelector(selector, ec, ...data) {
+    static fromSelector(selector, modules, ...data) {
         const templateEl = document.querySelector(selector);
         if (!(templateEl instanceof HTMLTemplateElement)) {
             throw new Error("template selector does not match any template tag");
         }
         const fragment = templateEl.content;
-        return new Template(fragment, ec, ...data);
+        return new Template(fragment, modules, data);
     }
 
     /**
      * 
      * @param {HTMLTemplateElement} templateEl 
-     * @param {EvaluationContext} ec 
+     * @param {{ [k: string] : any }?} modules
      * @param {...*} data 
      * @returns the template
      */
-    static fromTemplate(templateEl, ec, ...data) {
+    static fromTemplate(templateEl, modules, ...data) {
         const fragment = templateEl.content;
-        return new Template(fragment, ec, ...data);
+        return new Template(fragment, modules, data);
     }
 
     /**
      * 
      * @param {DocumentFragment} fragment 
-     * @param {EvaluationContext} ec 
+     * @param { { [k: string] : any }? } modules
      * @param {...*} data 
      * @returns the template
      */
-    static fromFragment(fragment, ec, ...data) {
-        return new Template(fragment, ec, ...data);
+    static fromFragment(fragment, modules, ...data) {
+        return new Template(fragment, modules, data);
     }
     #fragment;
-    #ec;
-    #expressionEvaluator;
-    #commandsHandler;
-    #data;
-    constructor(fragment, ec, ...data) {
+    #modules;
+    #dataStack;
+    /**
+     * @param {DocumentFragment} fragment
+     * @param {{ [x: string]: any; }?} modules
+     * @param {any[]} dataStack
+     */
+    constructor(fragment, modules, dataStack) {
         this.#fragment = fragment;
-        this.#ec = ec;
-        this.#expressionEvaluator = new ExpressionEvaluator(ec.functions);
-        this.#commandsHandler = new TplCommandsHandler();
-        this.#data = data;
+        this.#modules = modules;
+        this.#dataStack = dataStack;
     }
     withFragment(fragment) {
-        return new Template(fragment, this.#ec, ...this.#data);
+        return new Template(fragment, this.#modules, this.#dataStack);
     }
     withData(...data) {
-        return data.length === 0 ? this : new Template(this.#fragment, this.#ec, ...this.#data, ...data);
+        return data.length === 0 ? this : new Template(this.#fragment, this.#modules, [...this.#dataStack, ...data]);
     }
-    evaluate(expression) {
-        return this.#expressionEvaluator.evaluate(expression, ...this.#data);
-    }
-    evaluateTemplated(expression) {
-        return this.#expressionEvaluator.evaluateTemplated(expression, ...this.#data);
+    evaluate(expression, mode) {
+        return Expressions.interpret(this.#modules, this.#dataStack, expression, mode);
     }
     render(...data) {
         const tpl = this.withData(...data);
         try {
-            const ops = new NodeOperations(TplCommandsHandler.DATA_PREFIX);
+            const ops = new NodeOperations();
             const fragment = document.importNode(tpl.#fragment, true);
-            const nodeFilter = createNodeFilter(TplCommandsHandler.DATA_PREFIX, "{{", "}}");
-            const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, nodeFilter);
+            const iterator = document.createNodeIterator(fragment, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, Template.#NODE_FILTER);
             let node;
             while ((node = iterator.nextNode()) !== null) {
                 ops.cleanup();
                 if (node.nodeType === Node.TEXT_NODE) {
                     try {
-                        tpl.#commandsHandler.textNode(tpl, node, node.nodeValue, ops);
+                        CommandsHandler.textNode(tpl, node, node.nodeValue, ops);
                     } catch (ex) {
                         throw new RenderError("Error evaluating text node", node, ex);
                     }
                     continue;
                 }
-                const commands = TplCommandsHandler.ORDERED_COMMANDS;
+                const commands = CommandsHandler.ORDERED_COMMANDS;
                 for (let i = 0; i !== commands.length; ++i) {
                     const command = commands[i];
+                    // @ts-ignore
                     if (!(command in node.dataset)) {
                         continue;
                     }
                     const value = ops.popData(node, command);
                     try {
-                        tpl.#commandsHandler[command](tpl, node, value, ops);
+                        CommandsHandler[command](tpl, node, value, ops);
                     } catch (ex) {
                         throw new RenderError(`Error evaluating command ${command}`, node, ex);
                     }
                 }
+                // @ts-ignore
                 Object.keys(node.dataset || {})
-                    .filter(k => k.startsWith(TplCommandsHandler.DATA_PREFIX))
-                    .map(k => [k, k.substring(TplCommandsHandler.DATA_PREFIX.length).split(/(?=[A-Z])/).join('-').toLowerCase()])
+                    .filter(k => k.startsWith('tpl'))
+                    .map(k => [k, k.substring('tpl'.length).split(/(?=[A-Z])/).join('-').toLowerCase()])
                     .forEach(([dataSetKey, attributeName]) => {
                         const expression = ops.popData(node, dataSetKey);
                         const evaluated = tpl.evaluate(expression);
                         if (typeof evaluated !== 'boolean') {
-                            if(evaluated !== null && evaluated !== undefined){
+                            if (evaluated !== null && evaluated !== undefined) {
                                 node.setAttribute(attributeName, evaluated);
                             }
                             return;
@@ -321,6 +280,17 @@ class Template {
         const el = document.querySelector(selector);
         this.appendTo(el, ...data);
     }
+    static #NODE_FILTER(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return node.nodeValue.includes("{{") && node.nodeValue.includes("}}") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+        for (const attr of node.attributes) {
+            if (attr.name.startsWith("data-tpl-")) {
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+        return NodeFilter.FILTER_SKIP;
+    }
 }
 
 class RenderError extends Error {
@@ -337,12 +307,12 @@ class RenderError extends Error {
     static #cleanup(node) {
         if (node.nodeType === Node.TEXT_NODE) {
             node.nodeValue = node.nodeValue.trim();
-        }        
+        }
         for (var n = 0; n < node.childNodes.length; n++) {
             var child = node.childNodes[n];
             if (child.nodeType === Node.TEXT_NODE) {
                 child.nodeValue = child.nodeValue.trim();
-                if(child.nodeValue.length === 0){
+                if (child.nodeValue.length === 0) {
                     node.removeChild(child);
                     n--;
                 }
@@ -357,4 +327,4 @@ class RenderError extends Error {
 
 
 
-export { Template, TplCommandsHandler, EvaluationContext };
+export { Template };
