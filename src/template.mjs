@@ -2,6 +2,7 @@ import { Fragments } from "./fragments.mjs";
 import { Expressions } from "./expressions.mjs";
 
 
+
 class NodeOperations {
     #forRemoval;
     constructor() {
@@ -120,12 +121,15 @@ class CommandsHandler {
     static textNode(node, expression, ops, modules, dataStack) {
         const nodes = Expressions.interpret(modules, dataStack, expression, Expressions.MODE_TEMPLATED)
             .map(v => {
-                switch (v.type) {
-                    case 't': return document.createTextNode(v.value === null || v.value === undefined ? "" : v.value);
-                    case 'h': return Fragments.fromHtml(v.value === null || v.value === undefined ? "" : v.value);
-                    case 'n': return v.value === null || v.value === undefined ? new DocumentFragment() : v.value;
+                if(v.value === null || v.value === undefined){
+                    return null
                 }
-            });
+                switch (v.type) {
+                    case 't': return document.createTextNode(v.value);
+                    case 'h': return Fragments.fromHtml(v.value);
+                    case 'n': return v.value;
+                }
+            }).filter(v => v);
         ops.replace(node, nodes);
     }
 }

@@ -134,21 +134,33 @@ class Expressions {
     static MODE_TEMPLATED = Symbol("MODE_TEMPLATED");
 
     /**
+     * Parses an expression.
      * @param {string} expression
-     * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} mode
+     * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
+     * @returns the ast
      */
     static parse(expression, mode) {
         return parse(expression, { startRule: mode == Expressions.MODE_TEMPLATED ? 'TemplatedRoot' : 'ExpressionRoot' });
     }
     /**
+     * Evaluates an expression.
      * @param {{[k: string]: any }? } modules
      * @param {any[]} dataStack
      * @param {any} ast
-     * @param {Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED | null} mode
+     * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
+     * @returns the result
      */
     static evaluate(modules, dataStack, ast, mode) {
         return new EvaluatingVisitor(modules, dataStack).visitRoot(ast, mode == Expressions.MODE_TEMPLATED);
     }
+    /**
+     * Parses and evaluates an expression.
+     * @param {{ [x: string]: any; }?} modules
+     * @param {any[]} dataStack
+     * @param {string} expression
+     * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
+     * @returns the result
+     */
     static interpret(modules, dataStack, expression, mode) {
         return Expressions.evaluate(modules, dataStack, Expressions.parse(expression, mode), mode);
     }
