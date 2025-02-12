@@ -1,0 +1,63 @@
+<head>
+    <script src="dist/ftl.iife.min.js"></script>
+
+</head>
+
+<body>
+    <button>render</button>
+    <div id="target"></div>
+    <script>
+        const template = `
+        <div>
+            <div data-tpl-each="data">
+                <div>1</div>
+                <div>2</div>
+                <div>3</div>
+                <div>4</div>
+                <div>5</div>
+                <div>6</div>
+                <div>7</div>
+                <div>8</div>
+                <div>9</div>
+                <div>10</div>
+            </div>
+        </div>
+        `;
+
+
+        const data = Array(10_000).fill(1);
+
+        const [reset, timed] = (function () {
+            let latest = new Date().getTime();
+            return [function () {
+                latest = new Date().getTime();
+            }, function (...args) {
+                const now = new Date().getTime();
+                console.log(now - latest, ...args);
+                latest = now;
+            }]
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ec = ftl.EvaluationContext.configure({});
+
+            timed("parsing 1")
+            const t = document.createElement("template");
+            t.innerHTML = template;
+            const fragment = t.content;
+            const parsed = ftl.Template.fromFragment(fragment, ec);
+
+            timed("parsed")
+            document.querySelector('button').addEventListener('click', () => {
+                reset();
+                timed("rendering 1")
+                const rendered = parsed.render({ data });
+                timed("rendered 1")
+                document.querySelector('div').replaceChildren(rendered);
+                timed("replaced 1")
+            })
+            timed("setup")
+
+        })
+    </script>
+</body>
