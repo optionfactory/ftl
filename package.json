@@ -7,7 +7,7 @@
         "dist/**"
     ],
     "repository": {
-        "url": "https://github.com/optionfactory/ftl"
+        "url": "git+https://github.com/optionfactory/ftl.git"
     },
     "keywords": [
         "templating",
