@@ -144,7 +144,7 @@ class Expressions {
     }
     /**
      * Evaluates an expression.
-     * @param {{[k: string]: any }? } modules
+     * @param {{[k: string]: any } | null | undefined } modules
      * @param {any[]} dataStack
      * @param {any} ast
      * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
@@ -155,7 +155,7 @@ class Expressions {
     }
     /**
      * Parses and evaluates an expression.
-     * @param {{ [x: string]: any; }?} modules
+     * @param {{ [x: string]: any; } | null | undefined} modules
      * @param {any[]} dataStack
      * @param {string} expression
      * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]

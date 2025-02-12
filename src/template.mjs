@@ -137,7 +137,7 @@ class Template {
     /**
      * Creates a template from a string.
      * @param {string} html
-     * @param {{ [k: string] : any }?} modules
+     * @param {{ [k: string] : any }?} [modules]
      * @param {...*} data
      * @returns the template
      */
@@ -148,7 +148,7 @@ class Template {
     /**
      * Creates a template from the content of the first template element matching the selector.
      * @param {string} selector for an HTMLTemplateElement
-     * @param {{ [k: string] : any }?} modules
+     * @param {{ [k: string] : any }?} [modules]
      * @param {...*} data 
      * @returns the template
      */
@@ -164,8 +164,8 @@ class Template {
     /**
      * Creates a template from the content of an HTMLTemplateElement.
      * @param {HTMLTemplateElement} templateEl 
-     * @param {{ [k: string] : any }?} modules
-     * @param {...*} data 
+     * @param {{ [k: string] : any }?} [modules]
+     * @param {...*} data
      * @returns the template
      */
     static fromTemplate(templateEl, modules, ...data) {
@@ -176,7 +176,7 @@ class Template {
     /**
      * Creates a template from a DocumentFragment.
      * @param {DocumentFragment} fragment 
-     * @param { { [k: string] : any }? } modules
+     * @param { { [k: string] : any }? } [modules]
      * @param {...*} data 
      * @returns the template
      */
@@ -189,7 +189,7 @@ class Template {
     /**
      * Creates a template.
      * @param {DocumentFragment} fragment
-     * @param {{ [x: string]: any; }?} modules
+     * @param {{ [x: string]: any; } | null | undefined} modules
      * @param {any[]} dataStack
      */
     constructor(fragment, modules, dataStack) {
