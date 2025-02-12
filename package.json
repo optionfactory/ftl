@@ -1,12 +1,14 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "0.32.0",
+    "version": "1.0.0",
     "main": "./dist/ftl.iife.js",
     "module": "./dist/ftl.mjs",
     "files": [
         "dist/**"
     ],
-    "repository": "https://github.com/optionfactory/ftl",
+    "repository": {
+        "url": "https://github.com/optionfactory/ftl"
+    },
     "keywords": [
         "templating",
         "dom"
@@ -19,7 +21,7 @@
         "Grogdunn"
     ],
     "scripts": {
-        "check": "tsc --project ./jsconfig.json", 
+        "check": "tsc --project ./jsconfig.json",
         "clean": "rimraf dist && npm prune",
         "initialize": "npm install",
         "test": "node --test",
