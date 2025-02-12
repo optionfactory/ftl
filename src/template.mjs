@@ -157,7 +157,7 @@ class Template {
         if (!(templateEl instanceof HTMLTemplateElement)) {
             throw new Error("template selector does not match any template tag");
         }
-        const fragment = templateEl.content;
+        const fragment = document.adoptNode(templateEl.content);
         return new Template(fragment, modules, data);
     }
 
@@ -169,7 +169,7 @@ class Template {
      * @returns the template
      */
     static fromTemplate(templateEl, modules, ...data) {
-        const fragment = templateEl.content;
+        const fragment = document.adoptNode(templateEl.content);
         return new Template(fragment, modules, data);
     }
 
