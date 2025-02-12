@@ -58,15 +58,14 @@ class CommandsHandler {
     static tplWith(node, expression, ops, modules, dataStack) {
         const evaluated = Expressions.interpret(modules, dataStack, expression);
         const varName = ops.popData(node, 'tplVar');
-        const newNode = new Template(node, modules, dataStack).render(varName ? { [varName]: evaluated } : evaluated);
+        const newNode = new Template(node, modules, dataStack).withOverlay(varName ? { [varName]: evaluated } : evaluated).render();
         ops.replace(node, [newNode]);
     }
     static tplEach(node, expression, ops, modules, dataStack) {
         const varName = ops.popData(node, 'tplVar');
+        const template = new Template(node, modules, dataStack);
         const evaluated = Expressions.interpret(modules, dataStack, expression);
-        const nodes = evaluated.map(v => {
-            return new Template(node, modules, dataStack).render(varName ? { [varName]: v } : v);
-        });
+        const nodes = evaluated.map(v => template.withOverlay(varName ? { [varName]: v } : v).render());
         ops.replace(node, nodes);
     }
     static tplWhen(node, expression, ops, modules, dataStack) {
@@ -121,7 +120,7 @@ class CommandsHandler {
     static textNode(node, expression, ops, modules, dataStack) {
         const nodes = Expressions.interpret(modules, dataStack, expression, Expressions.MODE_TEMPLATED)
             .map(v => {
-                if(v.value === null || v.value === undefined){
+                if (v.value === null || v.value === undefined) {
                     return null
                 }
                 switch (v.type) {
@@ -136,6 +135,7 @@ class CommandsHandler {
 
 class Template {
     /**
+     * Creates a template from a string.
      * @param {string} html
      * @param {{ [k: string] : any }?} modules
      * @param {...*} data
@@ -146,7 +146,7 @@ class Template {
     }
 
     /**
-     * 
+     * Creates a template from the content of the first template element matching the selector.
      * @param {string} selector for an HTMLTemplateElement
      * @param {{ [k: string] : any }?} modules
      * @param {...*} data 
@@ -162,7 +162,7 @@ class Template {
     }
 
     /**
-     * 
+     * Creates a template from the content of an HTMLTemplateElement.
      * @param {HTMLTemplateElement} templateEl 
      * @param {{ [k: string] : any }?} modules
      * @param {...*} data 
@@ -174,7 +174,7 @@ class Template {
     }
 
     /**
-     * 
+     * Creates a template from a DocumentFragment.
      * @param {DocumentFragment} fragment 
      * @param { { [k: string] : any }? } modules
      * @param {...*} data 
@@ -187,6 +187,7 @@ class Template {
     #modules;
     #dataStack;
     /**
+     * Creates a template.
      * @param {DocumentFragment} fragment
      * @param {{ [x: string]: any; }?} modules
      * @param {any[]} dataStack
@@ -196,17 +197,56 @@ class Template {
         this.#modules = modules;
         this.#dataStack = dataStack;
     }
+    /**
+     * Creates a new Template replacing the fragment.
+     * @param {DocumentFragment} fragment
+     */
     withFragment(fragment) {
         return new Template(fragment, this.#modules, this.#dataStack);
     }
-    withData(...data) {
-        return new Template(this.#fragment, this.#modules, [...this.#dataStack, ...data]);
+    /**
+     * Creates a new Template with a new module added.
+     * @param {string?} name
+     * @param {{[k: string]: any}} value
+     */
+    withModule(name, value) {
+        const module = name ? {[name]: value} : value;
+        return new Template(this.#fragment, { ...this.#modules, module }, this.#dataStack);
     }
+    /**
+     * Creates a new Template replacing the modules.
+     * @param {{ [x: string]: any; }?} modules
+     */
+    withModules(modules) {
+        return new Template(this.#fragment, modules, this.#dataStack);
+    }
+    /**
+     * Creates a new Template replacing the data stack.
+     * @param {...*} data
+     */
+    withData(...data) {
+        return new Template(this.#fragment, this.#modules, data);
+    }
+    /**
+     * Creates a new Template with new a data overlay added to the stack.
+     * @param {...*} data
+     */
+    withOverlay(...data) {
+        return new Template(this.#fragment, this.#modules, data.length == 0 ? this.#dataStack : [...this.#dataStack, ...data]);
+    }
+    /**
+     * Evaluates an expression using the configured modules and data.
+     * @param {string} expression
+     * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
+     */
     evaluate(expression, mode) {
         return Expressions.interpret(this.#modules, this.#dataStack, expression, mode);
     }
-    render(...data) {
-        const dataStack = data.length == 0 ? this.#dataStack : [...this.#dataStack, ...data];
+    /**
+     * Renders the template.
+     * @returns a DocumentFragment
+     */
+    render() {
         try {
             const ops = new NodeOperations();
             const imported = document.importNode(this.#fragment, true);
@@ -221,7 +261,7 @@ class Template {
                 ops.cleanup();
                 if (node.nodeType === Node.TEXT_NODE) {
                     try {
-                        CommandsHandler.textNode(node, node.nodeValue, ops, this.#modules, dataStack);
+                        CommandsHandler.textNode(node, node.nodeValue, ops, this.#modules, this.#dataStack);
                     } catch (ex) {
                         throw new RenderError("Error evaluating text node", node, ex);
                     }
@@ -234,7 +274,7 @@ class Template {
                     }
                     const value = ops.popData(node, command);
                     try {
-                        CommandsHandler[command](node, value, ops, this.#modules, dataStack);
+                        CommandsHandler[command](node, value, ops, this.#modules, this.#dataStack);
                     } catch (ex) {
                         throw new RenderError(`Error evaluating command ${command}`, node, ex);
                     }
@@ -246,7 +286,7 @@ class Template {
                     .forEach(([dataSetKey, attributeName]) => {
                         try {
                             const expression = ops.popData(node, dataSetKey);
-                            const evaluated = Expressions.interpret(this.#modules, dataStack, expression);
+                            const evaluated = Expressions.interpret(this.#modules, this.#dataStack, expression);
                             if (typeof evaluated !== 'boolean') {
                                 if (evaluated !== null && evaluated !== undefined) {
                                     node.setAttribute(attributeName, evaluated);
@@ -269,21 +309,39 @@ class Template {
             throw new RenderError("Error rendering template", this.#fragment, ex)
         }
     }
-    renderTo(el, ...data) {
-        const fragment = this.render(...data);
-        el.replaceChildren(fragment);
+    /**
+     * Renders this template on the Element (replacing children).
+     * @param {Element} el 
+     */
+    renderTo(el) {
+        el.replaceChildren(this.render());
     }
-    appendTo(el, ...data) {
-        const fragment = this.render(...data);
-        el.appendChild(fragment);
+    /**
+     * Renders this template appending the resulting fragment to the Element.
+     * @param {Element} el 
+     */
+    appendTo(el) {
+        el.appendChild(this.render());
     }
-    renderToSelector(selector, ...data) {
+    /**
+     * Renders this template appending the resulting fragment to the first Element maching the selector, if exists.
+     * @param {string} selector 
+     */
+    renderToSelector(selector) {
         const el = document.querySelector(selector);
-        this.renderTo(el, ...data);
+        if (el) {
+            this.renderTo(el);
+        }
     }
-    appendToSelector(selector, ...data) {
+    /**
+     * Renders this template appending the resulting fragment to the Element maching the selector, if exists.
+     * @param {string} selector 
+     */
+    appendToSelector(selector) {
         const el = document.querySelector(selector);
-        this.appendTo(el, ...data);
+        if (el) {
+            this.appendTo(el);
+        }
     }
     static #NODE_FILTER(node) {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -332,4 +390,4 @@ class RenderError extends Error {
 
 
 
-export { Template };
+export { Template, RenderError };
