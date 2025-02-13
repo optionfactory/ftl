@@ -23,20 +23,12 @@ class NodeOperations {
     prepend(ref, node) {
         ref.parentNode.insertBefore(node, ref);
     }
+    append(ref, node) {
+        ref.parentNode.insertBefore(node, ref.nextSibling);
+    }
     replace(ref, node) {
         this.prepend(ref, node);
         this.remove(ref);
-    }
-    replaceAndEvaluate(node, nodes) {
-        const els = Array.from(nodes);
-        let predecessor = node.nextSibling;
-        for (let i = 0; i !== els.length; ++i) {
-            const el = els[i];
-            const lastRealElement = (el instanceof DocumentFragment) ? el.lastChild : el;
-            node.parentNode.insertBefore(el, predecessor);
-            predecessor = lastRealElement?.nextSibling;
-        }
-        this.remove(node);
     }
     cleanup() {
         while (this.#forRemoval.length) {
@@ -82,7 +74,10 @@ class CommandsHandler {
     static tplRemove(node, value, ops, modules, dataStack) {
         switch (value.toLowerCase()) {
             case 'tag':
-                ops.replaceAndEvaluate(node, node.childNodes);
+                const fragment = new DocumentFragment();
+                fragment.append(...node.childNodes);
+                ops.append(node, fragment);
+                ops.remove(node);
                 break;
             case 'body':
                 node.replaceChildren();
