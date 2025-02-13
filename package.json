@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "1.0.2-dev.0",
+    "version": "1.0.2",
     "main": "./dist/ftl.iife.js",
     "module": "./dist/ftl.mjs",
     "files": [
@@ -11,7 +11,8 @@
     },
     "keywords": [
         "templating",
-        "dom"
+        "dom",
+        "webcomponents"
     ],
     "license": "MIT",
     "author": "rferranti",
