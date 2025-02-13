@@ -24,7 +24,7 @@
         "check": "tsc --project ./jsconfig.json",
         "clean": "rimraf dist && npm prune",
         "initialize": "npm install",
-        "test": "node --test",
+        "test": "node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=test/lcov.info",
         "build": "npx rollup --config rollup.conf.mjs"
     },
     "devDependencies": {

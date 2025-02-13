@@ -1,6 +1,6 @@
-import { Template } from "../dist/ftl.mjs";
+import { Template, Fragments } from "../dist/ftl.mjs";
 import { strict as assert } from 'node:assert';
-import { mock, test, it, describe } from 'node:test'; 
+import { it, describe } from 'node:test'; 
 import { JSDOM } from "jsdom";
 
 
@@ -8,22 +8,13 @@ function mockdom(html) {
     let jsdom = new JSDOM(html);
     globalThis.document = jsdom.window.document;
     globalThis.Node = jsdom.window.Node;
-    globalThis.NodeList = jsdom.window.NodeList;
-    globalThis.Element = jsdom.window.Element;
     globalThis.DocumentFragment = jsdom.window.DocumentFragment;
     globalThis.NodeFilter = jsdom.window.NodeFilter;
-    globalThis.HTMLTemplateElement = jsdom.window.HTMLTemplateElement;
     return jsdom;
 }
 
 mockdom("<html></html>");
 
-
-function toHtml(node) {
-    var r = document.createElement("root");
-    r.appendChild(node);
-    return r.innerHTML;
-}
 
 const modules = {
     math: {
@@ -37,183 +28,183 @@ describe('Template', () => {
         let data = [1, 2];
         let template = Template.fromHtml('<div data-tpl-each="self">{{self}}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>1</div><div>2</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>1</div><div>2</div>');
     });
     it('can skip rendering with *-if', () => {
         let data = {};
         let template = Template.fromHtml('<div data-tpl-if="false">{{v}}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '');
+        assert.strictEqual(Fragments.toHtml(rendered), '');
     });
     it('can render with *-if', () => {
         let data = {a: 1};
         let template = Template.fromHtml('<div data-tpl-if="true">{{a}}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>1</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>1</div>');
     });
     it('can render html from attribute', () => {
         let data = {a: '<h1>test</h1>'};
         let template = Template.fromHtml('<div data-tpl-html="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div><h1>test</h1></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div><h1>test</h1></div>');
     });
     it('rendering null html from attribute yields empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml('<div data-tpl-html="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div></div>');
     });
     it('rendering undefined html from attribute yields empty string', () => {
         let data = {a: undefined};
         let template = Template.fromHtml('<div data-tpl-html="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div></div>');
     });
 
     it('can render text from attribute', () => {
         let data = {a: '<h1>test</h1>'};
         let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>&lt;h1&gt;test&lt;/h1&gt;</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>&lt;h1&gt;test&lt;/h1&gt;</div>');
     });
     it('rendering null text from attribute yields empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div></div>');
     });
     it('rendering undefined text from attribute yield empty string', () => {
         let data = {a: undefined};
         let template = Template.fromHtml('<div data-tpl-text="a">nope</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div></div>');
     });        
     it('can render text from a text node', () => {
         let data = {a: "<>"};
         let template = Template.fromHtml("<div>b{{a}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>b&lt;&gt;d</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>b&lt;&gt;d</div>');
     });
     it('rendering null text from a text node yield empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml("<div>b{{a}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });    
     it('rendering undefined text from a text node yield empty string', () => {
         let data = {a: undefined};
         let template = Template.fromHtml("<div>b{{a}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });      
     it('can render html from a text node', () => {
         let data = {a: "<span></span>"};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>b<span></span>d</div>');
     });
     it('can render html from a node', () => {
         let data = {a: document.createElement("span")};
         let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>b<span></span>d</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>b<span></span>d</div>');
     });
     it('null node is rendered as an empty fragment', () => {
         let data = {a: null};
         let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });
     it('null node is rendered as an empty fragment', () => {
         let data = {};
         let template = Template.fromHtml("<div>b{{{{a}}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });
     it('rendering null text from an html node yield empty string', () => {
         let data = {a: null};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });    
     it('rendering undefined text from an html node yield empty string', () => {
         let data = {a: undefined};
         let template = Template.fromHtml("<div>b{{{a}}}d</div>", modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>bd</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>bd</div>');
     });      
 
     it('can evaluate a data-* attribute', () => {
         let data = {a: 1, b: 2};
         let template = Template.fromHtml('<div data-tpl-former="a" data-tpl-latter="b">content</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div former="1" latter="2">content</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div former="1" latter="2">content</div>');
     });
     it('can *-remove-tag', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-remove="tag">123</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '123');
+        assert.strictEqual(Fragments.toHtml(rendered), '123');
     });
     it('removing tag does not cause double evaluation', () => {
         let data = {a: "{{'1'}}"};
         let template = Template.fromHtml('<div data-tpl-remove="tag">{{a}}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), "{{'1'}}");
+        assert.strictEqual(Fragments.toHtml(rendered), "{{'1'}}");
     });    
     it('can *-remove-tag from *-each', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-each="self" data-tpl-remove="tag">{{ self }}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '1234');
+        assert.strictEqual(Fragments.toHtml(rendered), '1234');
     });
     it('can *-remove-tag from *-if', () => {
         let data = {};
         let template = Template.fromHtml('<div data-tpl-if="true" data-tpl-remove="tag">{{ 1 }}</div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '1');
+        assert.strictEqual(Fragments.toHtml(rendered), '1');
     });
     it('can evaluate nested tags (each -> if)', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-each="self"><span data-tpl-if="#math:isEven(self)">{{ self }}</span></div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div></div><div><span>2</span></div><div></div><div><span>4</span></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div></div><div><span>2</span></div><div></div><div><span>4</span></div>');
     });
     it('can evaluate nested tags (each -> if) removing tags', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-each="self" data-tpl-remove="tag"><span data-tpl-if="#math:isEven(self)" data-tpl-remove="tag">{{ self }}</span></div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '24');
+        assert.strictEqual(Fragments.toHtml(rendered), '24');
     });
     it('can evaluate nested tags (if -> each)', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-if="#math:isEven(2)"><span data-tpl-each="self">{{ self }}</span></div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div><span>1</span><span>2</span><span>3</span><span>4</span></div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div><span>1</span><span>2</span><span>3</span><span>4</span></div>');
     });
     it('can evaluate nested tags (if -> each) removing tags', () => {
         let data = [1, 2, 3, 4];
         let template = Template.fromHtml('<div data-tpl-if="#math:isEven(2)" data-tpl-remove="tag"><span data-tpl-each="self" data-tpl-remove="tag">{{ self }}</span></div>', modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '1234');
+        assert.strictEqual(Fragments.toHtml(rendered), '1234');
     });
     it('inner text node is not reevaluated when generated by tpl-text', () => {
         let data = {a: 1};
         let template = Template.fromHtml(`<div data-tpl-text="'{{a}}'"></div>`, modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>{{a}}</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>{{a}}</div>');
     });
     it('inner html node is not reevaluated when generated by tpl-html', () => {
         let data = {a: 1};
         let template = Template.fromHtml(`<div data-tpl-html="'{{a}}'"></div>`, modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), '<div>{{a}}</div>');
+        assert.strictEqual(Fragments.toHtml(rendered), '<div>{{a}}</div>');
     });    
     it('inner nodes are not reevaluated when generated by tpl-each', () => {
         let data = [`{{'1'}}`,`{{'2'}}`];
         let template = Template.fromHtml(`<div data-tpl-each="self">{{self}}</div>`, modules, data);
         let rendered = template.render();
-        assert.strictEqual(toHtml(rendered), `<div>{{'1'}}</div><div>{{'2'}}</div>`);
+        assert.strictEqual(Fragments.toHtml(rendered), `<div>{{'1'}}</div><div>{{'2'}}</div>`);
     });    
     it('can show error', () => {
         let data = [1, 2];

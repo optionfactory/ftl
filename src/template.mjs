@@ -1,7 +1,5 @@
-import { Fragments } from "./fragments.mjs";
+import { Attributes, Fragments } from "./dom.mjs";
 import { Expressions } from "./expressions.mjs";
-
-
 
 class NodeOperations {
     #forRemoval;
@@ -266,41 +264,37 @@ class Template {
                     }
                     continue;
                 }
+                const el = /** @type {HTMLElement} */ (node);
                 for (const command of CommandsHandler.ORDERED_COMMANDS) {
-                    // @ts-ignore
-                    if (!(command in node.dataset)) {
+                    if (!(command in el.dataset)) {
                         continue;
                     }
-                    const value = ops.popData(node, command);
+                    const value = ops.popData(el, command);
                     try {
-                        CommandsHandler[command](node, value, ops, this.#modules, this.#dataStack);
+                        CommandsHandler[command](el, value, ops, this.#modules, this.#dataStack);
                     } catch (ex) {
-                        throw new RenderError(`Error evaluating command ${command}`, node, ex);
+                        throw new RenderError(`Error evaluating command ${command}`, el, ex);
                     }
                 }
-                // @ts-ignore
-                Object.keys(node.dataset || {})
-                    .filter(k => k.startsWith('tpl'))
-                    .map(k => [k, k.substring('tpl'.length).split(/(?=[A-Z])/).join('-').toLowerCase()])
-                    .forEach(([dataSetKey, attributeName]) => {
-                        try {
-                            const expression = ops.popData(node, dataSetKey);
-                            const evaluated = Expressions.interpret(this.#modules, this.#dataStack, expression);
-                            if (typeof evaluated !== 'boolean') {
-                                if (evaluated !== null && evaluated !== undefined) {
-                                    node.setAttribute(attributeName, evaluated);
-                                }
-                                return;
-                            }
-                            if (evaluated) {
-                                node.setAttribute(attributeName, attributeName);
-                            } else {
-                                node.removeAttribute(attributeName);
-                            }
-                        } catch (ex) {
-                            throw new RenderError(`Error evaluating command ${dataSetKey}`, node, ex);
+                for(const dataSetKey of Object.keys(el.dataset || {})){
+                    if(!dataSetKey.startsWith('tpl')){
+                        continue;
+                    }
+                    const attributeName = dataSetKey.substring('tpl'.length).split(/(?=[A-Z])/).join('-').toLowerCase();
+                    try {
+                        const expression = ops.popData(el, dataSetKey);
+                        const evaluated = Expressions.interpret(this.#modules, this.#dataStack, expression);
+                        if (typeof evaluated === 'boolean') {
+                            Attributes.toggle(el, attributeName, evaluated);
+                            continue;
                         }
-                    });
+                        if (evaluated !== null && evaluated !== undefined) {
+                            el.setAttribute(attributeName, evaluated);
+                        }
+                    } catch (ex) {
+                        throw new RenderError(`Error evaluating command ${dataSetKey}`, el, ex);
+                    }
+                }
             }
             ops.cleanup();
             return fragment;

@@ -1,8 +1,6 @@
 import { Expressions } from "../dist/ftl.mjs";
-
-
 import { strict as assert } from 'node:assert';
-import { mock, test, it, describe } from 'node:test';
+import { it, describe } from 'node:test';
 
 const modules = {
     one: () => 1,
@@ -11,7 +9,7 @@ const modules = {
     }
 };
 
-function verify(description, expr, data, expected) {
+const verify = (description, expr, data, expected) => {
     it(description || `${expr} == ${expected}`, () => {
         assert.deepStrictEqual(Expressions.interpret(modules, data, expr), expected);
     })
