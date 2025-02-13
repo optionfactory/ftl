@@ -20,12 +20,12 @@ class NodeOperations {
         delete node.dataset[key];
         return v;
     }
-    replace(node, nodes) {
-        const els = Array.from(nodes);
-        for (let i = 0; i !== els.length; ++i) {
-            node.parentNode.insertBefore(els[i], node);
-        }
-        this.remove(node);
+    prepend(ref, node) {
+        ref.parentNode.insertBefore(node, ref);
+    }
+    replace(ref, node) {
+        this.prepend(ref, node);
+        this.remove(ref);
     }
     replaceAndEvaluate(node, nodes) {
         const els = Array.from(nodes);
@@ -59,14 +59,19 @@ class CommandsHandler {
         const evaluated = Expressions.interpret(modules, dataStack, expression);
         const varName = ops.popData(node, 'tplVar');
         const newNode = new Template(node, modules, dataStack).withOverlay(varName ? { [varName]: evaluated } : evaluated).render();
-        ops.replace(node, [newNode]);
+        ops.replace(node, newNode);
     }
     static tplEach(node, expression, ops, modules, dataStack) {
         const varName = ops.popData(node, 'tplVar');
         const template = new Template(node, modules, dataStack);
         const evaluated = Expressions.interpret(modules, dataStack, expression);
-        const nodes = evaluated.map(v => template.withOverlay(varName ? { [varName]: v } : v).render());
-        ops.replace(node, nodes);
+        if (!evaluated?.[Symbol.iterator]) {
+            throw new Error(`Expected an iterable got '${evaluated}'`);
+        }
+        for (const v of evaluated) {
+            ops.prepend(node, template.withOverlay(varName ? { [varName]: v } : v).render());
+        }
+        ops.remove(node);
     }
     static tplWhen(node, expression, ops, modules, dataStack) {
         const accept = Expressions.interpret(modules, dataStack, expression);
@@ -91,7 +96,7 @@ class CommandsHandler {
         const text = Expressions.interpret(modules, dataStack, expression);
         const newNode = node.cloneNode();
         newNode.replaceChildren(text === null || text === undefined ? "" : text);
-        ops.replace(node, [newNode]);
+        ops.replace(node, newNode);
     }
     static tplValue(node, expression, ops, modules, dataStack) {
         node.value = Expressions.interpret(modules, dataStack, expression);
@@ -100,7 +105,7 @@ class CommandsHandler {
         const html = Expressions.interpret(modules, dataStack, expression);
         const newNode = node.cloneNode();
         newNode.innerHTML = html === null || html === undefined ? "" : html;
-        ops.replace(node, [newNode]);
+        ops.replace(node, newNode);
     }
     static tplClassAppend(node, expression, ops, modules, dataStack) {
         const classes = Expressions.interpret(modules, dataStack, expression);
@@ -118,18 +123,17 @@ class CommandsHandler {
         });
     }
     static textNode(node, expression, ops, modules, dataStack) {
-        const nodes = Expressions.interpret(modules, dataStack, expression, Expressions.MODE_TEMPLATED)
-            .map(v => {
-                if (v.value === null || v.value === undefined) {
-                    return null
-                }
-                switch (v.type) {
-                    case 't': return document.createTextNode(v.value);
-                    case 'h': return Fragments.fromHtml(v.value);
-                    case 'n': return v.value;
-                }
-            }).filter(v => v);
-        ops.replace(node, nodes);
+        for (const v of Expressions.interpret(modules, dataStack, expression, Expressions.MODE_TEMPLATED)) {
+            if (v.value === null || v.value === undefined) {
+                continue;
+            }
+            switch (v.type) {
+                case 't': ops.prepend(node, document.createTextNode(v.value)); break;
+                case 'h': ops.prepend(node, Fragments.fromHtml(v.value)); break;
+                case 'n': ops.prepend(node, v.value); break;
+            }
+        }
+        ops.remove(node);
     }
 }
 
@@ -210,7 +214,7 @@ class Template {
      * @param {{[k: string]: any}} value
      */
     withModule(name, value) {
-        const module = name ? {[name]: value} : value;
+        const module = name ? { [name]: value } : value;
         return new Template(this.#fragment, { ...this.#modules, module }, this.#dataStack);
     }
     /**
