@@ -78,7 +78,7 @@ NavigationSubscript "subscript"
 
 NavigationMethod "method-call" 
     = op:"?."? "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" { 
-        return {type: "method", ns: op !== null, args: h == null ? [] : [h].concat(t)}; 
+        return {type: "method", ns: op !== null, args: h === null ? [] : [h, ...t]}; 
     }
 
 ParensExpression 
@@ -90,7 +90,7 @@ ParensExpression
 
 FunctionCall "function-call" 
     = fn:FunctionRef "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" {
-        const args = h == null ? [] : [h].concat(t);
+        const args = h === null ? [] : [h, ...t];
         return {type: "call", value: fn, args};
     }
 
@@ -110,7 +110,7 @@ BooleanLiteral "boolean"
     }
 
 NumberLiteral "number" = p:$[0-9]+ s:("." @$[0-9]*)? { 
-    return { type: "literal", value: s == null ? parseInt(p) : parseFloat(p +"." + s)};
+    return { type: "literal", value: s === null ? parseInt(p) : parseFloat(p +"." + s)};
 }
 
 StringLiteral "string"
@@ -119,7 +119,7 @@ StringLiteral "string"
 
 ArrayLiteral "array" 
     = "[" _ h:(Expression)? _ t:("," _ @Expression _)* "]" { 
-        const value = h == null ? [] : [h].concat(t);
+        const value = h === null ? [] : [h, ...t];
         return {type: "array", value};
     }
 

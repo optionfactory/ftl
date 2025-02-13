@@ -229,7 +229,7 @@ class Template {
      * @param {...*} data
      */
     withOverlay(...data) {
-        return new Template(this.#fragment, this.#modules, data.length == 0 ? this.#dataStack : [...this.#dataStack, ...data]);
+        return new Template(this.#fragment, this.#modules, data.length === 0 ? this.#dataStack : [...this.#dataStack, ...data]);
     }
     /**
      * Evaluates an expression using the configured modules and data.

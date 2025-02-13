@@ -41,13 +41,13 @@ class EvaluatingVisitor {
     }
     call(node) {
         const fnRef = node.value;
-        const module = fnRef.module == null ? this.#modules : this.#modules?.[fnRef.module];
+        const module = fnRef.module === null ? this.#modules : this.#modules?.[fnRef.module];
         if (!module) {
             throw new Error(`Module "${fnRef.module}" not found`)
         }
         const fn = module[fnRef.value];
         if (!fn) {
-            throw new Error(`Function "#${fnRef.module == null ? '' : fnRef.module + ":"}${fnRef.value}" not found`)
+            throw new Error(`Function "#${fnRef.module === null ? '' : fnRef.module + ":"}${fnRef.value}" not found`)
         }
         const args = node.args.map(arg => this.visit(arg));
         return fn.apply(this, args);
@@ -140,7 +140,7 @@ class Expressions {
      * @returns the ast
      */
     static parse(expression, mode) {
-        return parse(expression, { startRule: mode == Expressions.MODE_TEMPLATED ? 'TemplatedRoot' : 'ExpressionRoot' });
+        return parse(expression, { startRule: mode === Expressions.MODE_TEMPLATED ? 'TemplatedRoot' : 'ExpressionRoot' });
     }
     /**
      * Evaluates an expression.
@@ -151,7 +151,7 @@ class Expressions {
      * @returns the result
      */
     static evaluate(modules, dataStack, ast, mode) {
-        return new EvaluatingVisitor(modules, dataStack).visitRoot(ast, mode == Expressions.MODE_TEMPLATED);
+        return new EvaluatingVisitor(modules, dataStack).visitRoot(ast, mode === Expressions.MODE_TEMPLATED);
     }
     /**
      * Parses and evaluates an expression.
