@@ -1,5 +1,3 @@
-import { Deferred } from "./deferred.mjs"
-
 class Fragments {
     /**
      * Creates a DocumentFragment from an string.
@@ -163,8 +161,12 @@ class Nodes {
      * @returns {Promise<undefined>} a Promise
      */
     static waitForUpgrades() {
-        const { promise, resolve } = new Deferred()
+        let resolve;
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+        });
         if (document.readyState === 'complete') {
+            // @ts-ignore
             resolve(null);
             return promise;
         }
