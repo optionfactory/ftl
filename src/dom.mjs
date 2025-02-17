@@ -1,3 +1,4 @@
+import { Deferred } from "./deferred.mjs"
 
 class Fragments {
     /**
@@ -150,12 +151,32 @@ class Nodes {
      */
     static isParsed(el) {
         //@ts-ignore
-        for (let c = el; c ; c = c.parentNode) {
+        for (let c = el; c; c = c.parentNode) {
             if (c.nextSibling) {
                 return true;
             }
         }
         return false;
+    }
+    /**
+     * Wait for document to be in state 'complete'.
+     * @returns {Promise<undefined>} a Promise
+     */
+    static waitForUpgrades() {
+        const { promise, resolve } = new Deferred()
+        if (document.readyState === 'complete') {
+            resolve(null);
+            return promise;
+        }
+        const cb = (event) => {
+            if (document.readyState !== 'complete') {
+                return;
+            }
+            document.removeEventListener("readystatechange", cb);
+            resolve(null);
+        }
+        document.addEventListener("readystatechange", cb);
+        return promise;
     }
     /**
      * Returns the first child of the element element (if exists) matching the selector.
