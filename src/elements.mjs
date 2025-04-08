@@ -121,19 +121,17 @@ const ParsedElement = (conf) => {
                 upgrades.enqueue(this);
                 return;
             }
-            this.ownerDocument.addEventListener('DOMContentLoaded', () => {
-                observer.disconnect();
-                upgrades.enqueue(this);
-            });
+            const ac = new AbortController();
+            const clearAndQueue = () => { ac.abort(); observer.disconnect(); upgrades.enqueue(this); }
+            this.ownerDocument.addEventListener('DOMContentLoaded', clearAndQueue, { signal: ac.signal });
             const observer = new MutationObserver(() => {
                 if (!Nodes.isParsed(this)) {
                     return;
                 }
-                observer.disconnect();
-                upgrades.enqueue(this);
+                clearAndQueue();
             });
             const parent = /** @type {Node} */ (this.parentNode);
-            observer.observe(parent, { childList: true, subtree: true });
+            observer.observe(parent, { childList: true });
         }
         attributeChangedCallback(attr, oldValue, newValue) {
             if (!this.#parsed || oldValue === newValue) {
@@ -159,7 +157,7 @@ const ParsedElement = (conf) => {
             }
             this.#parsed = true;
             // @ts-ignore
-            await this.render({
+            await this.render?.({
                 slots: slots ? LightSlots.from(this) : undefined,
                 observed: Object.fromEntries(attrsAndMappers.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute))])),
             });
