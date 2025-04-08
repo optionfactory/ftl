@@ -31,7 +31,7 @@ class Fragments {
     }
     /**
      * Creates a DocumentFragment from childNodes of an element.
-     * @param {HTMLElement} el 
+     * @param {Node} el 
      * @returns {DocumentFragment} the fragment
      */
     static fromChildNodes(el) {
@@ -53,7 +53,7 @@ class Attributes {
     }
     /**
      * Sets an attribute if not present.
-     * @param {HTMLElement} el 
+     * @param {Element} el 
      * @param {string} k 
      * @param {string} v 
      * @returns 
@@ -67,8 +67,8 @@ class Attributes {
     /**
      * Forwards prefixed attributes from an element to another (removing the prefix).
      * @param {string} prefix 
-     * @param {HTMLElement} from 
-     * @param {HTMLElement} to 
+     * @param {Element} from 
+     * @param {Element} to 
      */
     static forward(prefix, from, to) {
         from.getAttributeNames()
