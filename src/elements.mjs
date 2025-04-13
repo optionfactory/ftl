@@ -16,6 +16,10 @@ class ElementsRegistry {
         this.#idToTemplate[name] = Template.fromHtml(html);
         return name;
     }
+    plugin(p){
+        p.configure(this);
+        return this;
+    }
     define(tag, klass) {
         if (!this.#configured) {
             this.#tagToclass[tag] = klass;
