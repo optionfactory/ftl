@@ -77,41 +77,38 @@ class EvaluatingVisitor {
         return this.visit(node.cond) ? this.visit(node.ifTrue) : this.visit(node.ifFalse);
     }
     nav(node) {
-        const from = this.visit(node.lhs);
         let prev = undefined;
-        let cur = from;
+        let cur = this.visit(node.lhs);
         for (let i = 0; i !== node.rhs.length; ++i) {
-            const res = this.visit(node.rhs[i], cur, prev, node.rhs[i - 1]);
-            if (res.length === 0) {
+            const rhs = node.rhs[i];
+            if(rhs.ns && (cur === null || cur === undefined)){
                 return undefined;
             }
+
+            let value = undefined;
+
+            switch(rhs.type){
+                case 'dot': {
+                    value = cur[rhs.rhs]
+                }
+                break;
+                case 'sub': {
+                    value = cur[this.visit(rhs.rhs)]
+                }
+                break;
+                case 'method': {
+                    if (!cur){
+                        throw new Error(`Method missing "${node.rhs[i - 1].rhs}"`)
+                    }
+                    const args = rhs.args.map(arg => this.visit(arg));
+                    value = cur.apply(prev, args);
+                }
+                break;
+            }
             prev = cur;
-            cur = res[0];
+            cur = value;
         }
         return cur;
-    }
-    //navto
-    dot(node, from) {
-        if (node.ns && (from === null || from === undefined)) {
-            return [];
-        }
-        return [from[node.rhs]];
-    }
-    sub(node, from) {
-        if (node.ns && (from === null || from === undefined)) {
-            return [];
-        }
-        return [from[this.visit(node.rhs)]];
-    }
-    method(node, fn, scope, caller) {
-        if (node.ns && (fn === null || fn === undefined)) {
-            return [];
-        }
-        if (!fn) {
-            throw new Error(`Method missing "${caller.rhs}"`)
-        }
-        const args = node.args.map(arg => this.visit(arg));
-        return [fn.apply(scope, args)];
     }
     visit(node, ...args) {
         return this[node.type](node, ...args);
