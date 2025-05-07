@@ -7,18 +7,14 @@ class ElementsRegistry {
     #id = 0;
     #configured = false;
     #modules;
-    #data;
-    defineTemplate(html) {
+    #data = [];
+    defineTemplate(id, html) {
         if (html === null || html === undefined) {
             return undefined;
         }
-        const name = `unnamed-${++this.#id}`;
-        this.#idToTemplate[name] = Template.fromHtml(html);
-        return name;
-    }
-    plugin(p){
-        p.configure(this);
-        return this;
+        const tid = id ?? `unnamed-${++this.#id}`;
+        this.#idToTemplate[tid] = Template.fromHtml(html);
+        return tid;
     }
     define(tag, klass) {
         if (!this.#configured) {
@@ -28,9 +24,28 @@ class ElementsRegistry {
         customElements.define(tag, klass);
         return this;
     }
-    configure(modules, ...data) {
-        this.#modules = modules;
+    module(name, value){
+        const module = name ? { [name]: value } : value;
+        this.#modules = {...this.#modules, module};
+        return this;
+    }
+    modules(ms){
+        this.#modules = ms;
+        return this;
+    }
+    data(...data){
         this.#data = data;
+        return this;
+    }
+    overlay(...data){
+        this.#data = [...this.#data, ...data];
+        return this;
+    }
+    plugin(p){
+        p.configure(this);
+        return this;
+    }
+    configure() {
         for (const [tag, klass] of Object.entries(this.#tagToclass)) {
             customElements.define(tag, klass);
             delete this.#tagToclass[tag];
@@ -102,7 +117,7 @@ const ParsedElement = (conf) => {
     const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers[type]]);
     const attrToMapper = Object.fromEntries(attrsAndMappers);
 
-    const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, elements.defineTemplate(v)]);
+    const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, elements.defineTemplate(null, v)]);
     const templateNameToId = Object.fromEntries(templateNamesAndIds);
 
     const k = class extends HTMLElement {
