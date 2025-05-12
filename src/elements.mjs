@@ -1,11 +1,21 @@
+import { Expressions } from "./expressions.mjs"
 import { Template } from "./template.mjs"
 import { Nodes, LightSlots } from "./dom.mjs";
 
 class ElementsRegistry {
-    #tagToclass = {};
+    #tagToClass = {};
     #idToTemplate = {};
     #id = 0;
     #configured = false;
+    #mappers = {
+        'string': attr => attr,
+        'number': attr => attr === null ? null : Number(attr),
+        'presence': attr => attr !== null,
+        'bool': attr => attr === 'true',
+        'json': attr => attr === null ? null : JSON.parse(attr),
+        'csv': attr => attr === null ? [] : attr.split(",").map(e => e.trim()).filter(e => e)
+    };
+    #components = {};
     #modules;
     #data = [];
     defineTemplate(id, html) {
@@ -16,39 +26,47 @@ class ElementsRegistry {
         this.#idToTemplate[tid] = Template.fromHtml(html);
         return tid;
     }
-    define(tag, klass) {
+    defineElement(tag, klass) {
         if (!this.#configured) {
-            this.#tagToclass[tag] = klass;
+            this.#tagToClass[tag] = klass;
             return this;
         }
         customElements.define(tag, klass);
         return this;
     }
-    module(name, value){
+    defineModule(name, value) {
         const module = name ? { [name]: value } : value;
-        this.#modules = {...this.#modules, module};
+        this.#modules = { ...this.#modules, module };
         return this;
     }
-    modules(ms){
+    defineModules(ms) {
         this.#modules = ms;
         return this;
     }
-    data(...data){
+    defineComponent(name, value) {
+        this.#components[name] = value;
+        return this;
+    }
+    defineData(...data) {
         this.#data = data;
         return this;
     }
-    overlay(...data){
+    defineOverlay(...data) {
         this.#data = [...this.#data, ...data];
         return this;
     }
-    plugin(p){
+    defineMapper(k, v) {
+        this.#mappers[k] = v;
+        return this;
+    }
+    plugin(p) {
         p.configure(this);
         return this;
     }
     configure() {
-        for (const [tag, klass] of Object.entries(this.#tagToclass)) {
+        for (const [tag, klass] of Object.entries(this.#tagToClass)) {
             customElements.define(tag, klass);
-            delete this.#tagToclass[tag];
+            delete this.#tagToClass[tag];
         }
         this.#configured = true;
     }
@@ -65,9 +83,15 @@ class ElementsRegistry {
         }
         return template.withData(this.#data).withModules(this.#modules);
     }
+    component(name) {
+        return this.#components[name];
+    }
+    get mappers() {
+        return this.#mappers;
+    }
 }
 
-const elements = new ElementsRegistry();
+const registry = new ElementsRegistry();
 
 
 class UpgradeQueue {
@@ -75,10 +99,6 @@ class UpgradeQueue {
     constructor() {
         document.addEventListener('DOMContentLoaded', () => this.#dequeue());
     }
-    /**
-     * 
-     * @param {{upgrade: function}} el 
-     */
     enqueue(el) {
         if (!this.#q.length) {
             requestAnimationFrame(() => this.#dequeue());
@@ -92,14 +112,6 @@ class UpgradeQueue {
     }
 }
 
-const mappers = {
-    'string': attr => attr,
-    'number': attr => attr === null ? null : Number(attr),
-    'presence': attr => attr !== null,
-    'bool': attr => attr === 'true',
-    'json': attr => attr === null ? null : JSON.parse(attr)
-};
-
 const ParsedElement = (conf) => {
     const upgrades = globalThis.upgrades ??= new UpgradeQueue();
 
@@ -108,16 +120,16 @@ const ParsedElement = (conf) => {
     const attrsAndTypes = (observed ?? []).map(a => {
         const [attr, maybeType] = a.split(":");
         const type = maybeType?.trim() ?? 'string';
-        if (!(type in mappers)) {
+        if (!(type in registry.mappers)) {
             throw new Error(`unsupported attribute type: ${type}`);
         }
         return [attr.trim(), type];
     });
 
-    const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers[type]]);
+    const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, registry.mappers[type]]);
     const attrToMapper = Object.fromEntries(attrsAndMappers);
 
-    const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, elements.defineTemplate(null, v)]);
+    const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, registry.defineTemplate(null, v)]);
     const templateNameToId = Object.fromEntries(templateNamesAndIds);
 
     const k = class extends HTMLElement {
@@ -130,7 +142,7 @@ const ParsedElement = (conf) => {
             super();
         }
         template(name) {
-            return elements.template(templateNameToId[name ?? 'default']);
+            return registry.template(templateNameToId[name ?? 'default']);
         }
         connectedCallback() {
             if (this.#parsed) {
@@ -160,7 +172,7 @@ const ParsedElement = (conf) => {
                 return;
             }
             const mapper = attrToMapper[attr];
-            this[attr] = mapper(newValue);
+            this[attr] = mapper(newValue, attr, this);
         }
         reflect(fn) {
             this.#reflecting = true;
@@ -178,12 +190,12 @@ const ParsedElement = (conf) => {
             // @ts-ignore
             await this.render?.({
                 slots: slots ? LightSlots.from(this) : undefined,
-                observed: Object.fromEntries(attrsAndMappers.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute))])),
+                observed: Object.fromEntries(attrsAndMappers.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute), attribute, this)])),
             });
 
             for (const [attr, mapper] of attrsAndMappers) {
                 if (this.hasAttribute(attr)) {
-                    this[attr] = mapper(this.getAttribute(attr));
+                    this[attr] = mapper(this.getAttribute(attr), attr, this);
                 }
             }
         }
@@ -191,4 +203,4 @@ const ParsedElement = (conf) => {
     return k;
 }
 
-export { ElementsRegistry, elements, ParsedElement };
+export { ElementsRegistry, registry, ParsedElement };

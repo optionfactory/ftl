@@ -84,9 +84,7 @@ class EvaluatingVisitor {
             if(rhs.ns && (cur === null || cur === undefined)){
                 return undefined;
             }
-
             let value = undefined;
-
             switch(rhs.type){
                 case 'dot': {
                     value = cur[rhs.rhs]
