@@ -89,7 +89,7 @@ class ElementsRegistry {
             const attrsAndTypes = (observed ?? []).map(a => {
                 const [attr, maybeType] = a.split(":");
                 const type = maybeType?.trim() ?? 'string';
-                if (!(type in this.#mappers)) {
+                if (!(type in mappers) && !(type in this.#mappers)) {
                     throw new Error(`unsupported attribute type: ${type}`);
                 }
                 return [attr.trim(), type];
