@@ -208,7 +208,7 @@ class Template {
      */
     withModule(name, value) {
         const module = name ? { [name]: value } : value;
-        return new Template(this.#fragment, { ...this.#modules, module }, this.#dataStack);
+        return new Template(this.#fragment, { ...this.#modules, ...module }, this.#dataStack);
     }
     /**
      * Creates a new Template replacing the modules.
