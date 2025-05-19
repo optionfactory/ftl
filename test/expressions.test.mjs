@@ -1,11 +1,16 @@
+import "./mock-dom.mjs";
 import { Expressions } from "../dist/ftl.mjs";
 import { strict as assert } from 'node:assert';
 import { it, describe } from 'node:test';
+
 
 const modules = {
     one: () => 1,
     math: {
         isEven: (v) => v % 2 === 0
+    },
+    accessData: function() {
+        return this.a;
     }
 };
 
@@ -35,6 +40,7 @@ describe('Expression', () => {
     verify('can evaluate self', "self", ["someValue"], "someValue");
     verify('can call a function', "#one()", [], 1)
     verify('can call a function in module', "#math:isEven(2)", [], true)
+    verify('can reference data using this in a module function', "#accessData()", [{a:1}, {a:2}], 2)
     verify("can evaluate multiple !", "!!!!!!!!!!!a", [{ a: true }], false);
     verify("can use dict literal", "{'a': true, 'b': false}", [{}], { a: true, b: false });
     verify("can use array literal", "[1,2]", [{}], [1, 2]);

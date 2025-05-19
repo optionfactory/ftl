@@ -1,19 +1,7 @@
+import "./mock-dom.mjs";
 import { Template, Fragments } from "../dist/ftl.mjs";
 import { strict as assert } from 'node:assert';
 import { it, describe } from 'node:test'; 
-import { JSDOM } from "jsdom";
-
-
-function mockdom(html) {
-    let jsdom = new JSDOM(html);
-    globalThis.document = jsdom.window.document;
-    globalThis.Node = jsdom.window.Node;
-    globalThis.DocumentFragment = jsdom.window.DocumentFragment;
-    globalThis.NodeFilter = jsdom.window.NodeFilter;
-    return jsdom;
-}
-
-mockdom("<html></html>");
 
 
 const modules = {

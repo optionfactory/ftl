@@ -3,10 +3,22 @@ import { parse } from "./expressions-parser.peggy";
 
 class EvaluatingVisitor {
     #modules;
-    #dataStack;
+    #data;
     constructor(modules, dataStack) {
         this.#modules = modules;
-        this.#dataStack = dataStack;
+        this.#data = new Proxy(dataStack, {
+            get(target, prop) {
+                if (prop === 'self') {
+                    return target[target.length - 1];
+                }
+                for (let i = target.length; i !== 0; --i) {
+                    const overlay = target[i - 1];
+                    if (overlay.hasOwnProperty(prop)) {
+                        return overlay[prop];
+                    }
+                }
+            }
+        });
     }
     and(node) {
         return this.visit(node.lhs) && this.visit(node.rhs);
@@ -50,22 +62,13 @@ class EvaluatingVisitor {
             throw new Error(`Function "#${fnRef.module === null ? '' : fnRef.module + ":"}${fnRef.value}" not found`)
         }
         const args = node.args.map(arg => this.visit(arg));
-        return fn.apply(this, args);
+        return fn.apply(this.#data, args);
     }
     literal(node) {
         return node.value;
     }
     symbol(node) {
-        if (node.value === 'self') {
-            return this.#dataStack[this.#dataStack.length - 1];
-        }
-        for (let i = this.#dataStack.length; i !== 0; --i) {
-            const overlay = this.#dataStack[i - 1];
-            if (overlay.hasOwnProperty(node.value)) {
-                return overlay[node.value];
-            }
-        }
-        return undefined;
+        return this.#data[node.value];
     }
     dict(node) {
         return Object.fromEntries(node.value.map(entry => [entry[0].value, this.visit(entry[1])]));
@@ -81,27 +84,27 @@ class EvaluatingVisitor {
         let cur = this.visit(node.lhs);
         for (let i = 0; i !== node.rhs.length; ++i) {
             const rhs = node.rhs[i];
-            if(rhs.ns && (cur === null || cur === undefined)){
+            if (rhs.ns && (cur === null || cur === undefined)) {
                 return undefined;
             }
             let value = undefined;
-            switch(rhs.type){
+            switch (rhs.type) {
                 case 'dot': {
                     value = cur[rhs.rhs]
                 }
-                break;
+                    break;
                 case 'sub': {
                     value = cur[this.visit(rhs.rhs)]
                 }
-                break;
+                    break;
                 case 'method': {
-                    if (!cur){
+                    if (!cur) {
                         throw new Error(`Method missing "${node.rhs[i - 1].rhs}"`)
                     }
                     const args = rhs.args.map(arg => this.visit(arg));
                     value = cur.apply(prev, args);
                 }
-                break;
+                    break;
             }
             prev = cur;
             cur = value;
