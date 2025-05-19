@@ -55,7 +55,7 @@ class ElementsRegistry {
     }
     defineModule(name, value) {
         const module = name ? { [name]: value } : value;
-        this.#modules = { ...this.#modules, module };
+        this.#modules = { ...this.#modules, ...module };
         return this;
     }
     defineModules(ms) {
