@@ -20,7 +20,7 @@ class UpgradeQueue {
     }
 }
 
-class ElementsRegistry {
+class Registry {
     #tagToClass = {};
     #idToTemplate = {};
     #id = 0;
@@ -131,7 +131,7 @@ class ElementsRegistry {
     }
 }
 
-const registry = new ElementsRegistry();
+const registry = new Registry();
 
 class ParsedElement extends HTMLElement {
     static BITS = {
@@ -211,4 +211,4 @@ class ParsedElement extends HTMLElement {
 }
 
 
-export { ElementsRegistry, registry, ParsedElement };
+export { Registry, registry, ParsedElement };
