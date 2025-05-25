@@ -42,6 +42,7 @@ All attributes starting with `data-tpl-` (case sensitive) are evaluated in the f
   - `data-tpl-if`
   - `data-tpl-with`
   - `data-tpl-each`
+  - `data-tpl-when`
   - `data-tpl-value`
   - `data-tpl-class-append`
   - `data-tpl-attr-append`
