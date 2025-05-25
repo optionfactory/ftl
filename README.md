@@ -38,7 +38,7 @@ template.renderToSelector('#target', data);
 ```
 
 ## Attributes evaluation
-All attributes starting with `data-tpl-` (case sensitive) are evaluated in the followind order: 
+All attributes starting with `data-tpl-` are evaluated in the followind order: 
   - `data-tpl-if`
   - `data-tpl-with`
   - `data-tpl-each`
@@ -194,7 +194,7 @@ renders to
 ```
 
 ### data-tpl-*
-It is possible to preceed any attribute with `data-tpl-`. It will evaluate the expression and set the result as value of an attribute having the name of the given `data-tpl-` suffix
+It is possible to prefix any attribute with `data-tpl-`. It will evaluate the expression and set the result as value of an attribute having the name of the given `data-tpl-` suffix
 ```javascript
 functions = {
     text: {
@@ -213,16 +213,27 @@ renders to
 <p style="color: green">To be colored</p>
 ```
 
-boolean values are rendered as boolean attributes
+### Special values
+
+boolean values are always rendered as boolean attributes
 
 ```html
-    <input data-tpl-readonly="true">
+<input data-tpl-readonly="true">
 ```
 renders to
 ```html
-    <input readonly="readonly">
+<input readonly>
 ```
 
+`null` and `undefined` values cause the attribute to not be rendered
+
+```html
+<input data-tpl-readonly="aNullValue">
+```
+renders to
+```html
+<input>
+```
 
 
 ## Expression evaluation
@@ -353,7 +364,7 @@ renders to
 - Number literals: e.g: `3` or `3.1`
 - Function calls: e.g: `#module:fn()` or `#fn(1,2,3)`
 - Parenthesized expressions: e.g: `(a || b) && c`
-- Method call: e.g: `a.toLowerCase()`
+- Method call: e.g: `a.toLowerCase()` or `a.toLowerCase?.()`
 - Array access: e.g: `a[b]` or `a?.[b]`
 - Member access: e.g: `a.b` or `a?.b`
 - Logical not: e.g: `!a`
