@@ -50,8 +50,34 @@ class Registry {
             this.#tagToClass[tag] = klass;
             return this;
         }
-        customElements.define(tag, klass);
+        this.#augmentAndDefineElement(tag, klass);
         return this;
+    }
+    #augmentAndDefineElement(tag, klass) {
+        const { observed, template, templates, slots, mappers } = klass;
+        const attrsAndTypes = (observed ?? []).map(a => {
+            const [attr, maybeType] = a.split(":");
+            const type = maybeType?.trim() ?? 'string';
+            if (!(type in this.#mappers) && !(type in (mappers ?? {}))) {
+                throw new Error(`unsupported attribute type: ${type}`);
+            }
+            return [attr.trim(), type];
+        });
+
+        const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers?.[type] ?? this.#mappers[type]]);
+        const attrToMapper = Object.fromEntries(attrsAndMappers);
+
+        const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, registry.defineTemplate(null, v)]);
+        const templateNameToId = Object.fromEntries(templateNamesAndIds);
+
+        klass.BITS = {
+            enqueue: (el) => this.#upgrades.enqueue(el),
+            SLOTS: slots,
+            ATTR_TO_MAPPER: attrToMapper,
+            ATTRS_AND_MAPPERS: attrsAndMappers,
+            TEMPLATE_NAME_TO_ID: templateNameToId
+        }
+        customElements.define(tag, klass);
     }
     defineModule(name, value) {
         const module = name ? { [name]: value } : value;
@@ -84,31 +110,7 @@ class Registry {
     }
     configure() {
         for (const [tag, klass] of Object.entries(this.#tagToClass)) {
-            const { observed, template, templates, slots, mappers } = klass;
-        
-            const attrsAndTypes = (observed ?? []).map(a => {
-                const [attr, maybeType] = a.split(":");
-                const type = maybeType?.trim() ?? 'string';
-                if (!(type in this.#mappers) && !(type in (mappers ?? {}))) {
-                    throw new Error(`unsupported attribute type: ${type}`);
-                }
-                return [attr.trim(), type];
-            });
-        
-            const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers?.[type] ?? this.#mappers[type]]);
-            const attrToMapper = Object.fromEntries(attrsAndMappers);
-        
-            const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, registry.defineTemplate(null, v)]);
-            const templateNameToId = Object.fromEntries(templateNamesAndIds);
-
-            klass.BITS = {
-                enqueue: (el) => this.#upgrades.enqueue(el),
-                SLOTS: slots,
-                ATTR_TO_MAPPER: attrToMapper,
-                ATTRS_AND_MAPPERS: attrsAndMappers,
-                TEMPLATE_NAME_TO_ID: templateNameToId
-            }
-            customElements.define(tag, klass);
+            this.#augmentAndDefineElement(tag, klass);
             delete this.#tagToClass[tag];
         }
         this.#configured = true;
@@ -135,7 +137,7 @@ const registry = new Registry();
 
 class ParsedElement extends HTMLElement {
     static BITS = {
-        enqueue: (el) => {},
+        enqueue: (el) => { },
         SLOTS: false,
         ATTR_TO_MAPPER: {},
         ATTR_AND_MAPPERS: [],
@@ -145,8 +147,8 @@ class ParsedElement extends HTMLElement {
         return Object.keys(this.BITS.ATTR_TO_MAPPER);
     }
     #parsed = false;
-    #reflecting = false;    
-    #bits(){
+    #reflecting = false;
+    #bits() {
         return /** @type {typeof ParsedElement} */(this.constructor).BITS;
     }
     template(name) {
@@ -190,7 +192,7 @@ class ParsedElement extends HTMLElement {
             this.#reflecting = false;
         }
     }
-    render(c){
+    render(c) {
     }
     async upgrade() {
         if (this.#parsed) {
@@ -207,7 +209,7 @@ class ParsedElement extends HTMLElement {
                 this[attr] = mapper(this.getAttribute(attr), attr, this);
             }
         }
-    }    
+    }
 }
 
 
