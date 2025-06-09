@@ -219,10 +219,10 @@ class Template {
     }
     /**
      * Creates a new Template replacing the data stack.
-     * @param {...*} data
+     * @param {any[]} dataStack the dataStack
      */
-    withData(...data) {
-        return new Template(this.#fragment, this.#modules, data);
+    withData(dataStack) {
+        return new Template(this.#fragment, this.#modules, dataStack);
     }
     /**
      * Creates a new Template with new a data overlay added to the stack.
