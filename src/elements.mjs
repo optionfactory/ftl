@@ -184,30 +184,32 @@ class ParsedElement extends HTMLElement {
         const mapper = this.#bits().ATTR_TO_MAPPER[attr];
         this[attr] = mapper(newValue, attr, this);
     }
-    reflect(fn) {
-        this.#reflecting = true;
-        try {
-            fn();
-        } finally {
-            this.#reflecting = false;
+    #disabledBeforeParsed = null;
+    formDisabledCallback(disabled) {
+        if (!this.#parsed) {
+            this.#disabledBeforeParsed = disabled;
+            return;
         }
-    }
-    render(c) {
+        this.disabled = disabled;
     }
     async upgrade() {
         if (this.#parsed) {
             return;
         }
         this.#parsed = true;
-        await this.render({
-            slots: this.#bits().SLOTS ? LightSlots.from(this) : undefined,
-            observed: Object.fromEntries(this.#bits().ATTRS_AND_MAPPERS.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute), attribute, this)])),
-        });
-
-        for (const [attr, mapper] of this.#bits().ATTRS_AND_MAPPERS) {
-            if (this.hasAttribute(attr)) {
-                this[attr] = mapper(this.getAttribute(attr), attr, this);
-            }
+        const slots = this.#bits().SLOTS ? LightSlots.from(this) : undefined;
+        const observed = Object.fromEntries(this.#bits().ATTRS_AND_MAPPERS.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute), attribute, this)]));
+        const disabled = this.#disabledBeforeParsed ?? false
+        await this.render({ slots, observed, disabled });
+    }
+    render(c) {
+    }
+    reflect(fn) {
+        this.#reflecting = true;
+        try {
+            fn();
+        } finally {
+            this.#reflecting = false;
         }
     }
 }
