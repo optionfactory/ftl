@@ -37,7 +37,7 @@ class NodeOperations {
 
 class CommandsHandler {
     static ORDERED_COMMANDS = [
-        'tplIf', 'tplWith', 'tplEach', 'tplWhen', 'tplValue', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'
+        'tplIf', 'tplWith', 'tplEach', 'tplWhen', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'
     ];
     static tplIf(node, expression, ops, modules, dataStack) {
         const accept = Expressions.interpret(modules, dataStack, expression);
@@ -90,9 +90,6 @@ class CommandsHandler {
         const newNode = node.cloneNode();
         newNode.replaceChildren(text === null || text === undefined ? "" : text);
         ops.replace(node, newNode);
-    }
-    static tplValue(node, expression, ops, modules, dataStack) {
-        node.value = Expressions.interpret(modules, dataStack, expression);
     }
     static tplHtml(node, expression, ops, modules, dataStack) {
         const html = Expressions.interpret(modules, dataStack, expression);

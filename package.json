@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "2.0.10",
+    "version": "2.0.11",
     "main": "dist/ftl.iife.js",
     "module": "dist/ftl.mjs",
     "exports": {
