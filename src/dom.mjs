@@ -157,30 +157,6 @@ class Nodes {
         return false;
     }
     /**
-     * Wait for document to be in state 'complete'.
-     * @returns {Promise<undefined>} a Promise
-     */
-    static waitForUpgrades() {
-        let resolve;
-        const promise = new Promise((res, rej) => {
-            resolve = res;
-        });
-        if (document.readyState === 'complete') {
-            // @ts-ignore
-            resolve(null);
-            return promise;
-        }
-        const cb = (event) => {
-            if (document.readyState !== 'complete') {
-                return;
-            }
-            document.removeEventListener("readystatechange", cb);
-            resolve(null);
-        }
-        document.addEventListener("readystatechange", cb);
-        return promise;
-    }
-    /**
      * Returns the first child of the element element (if exists) matching the selector.
      * @param {Element} el 
      * @param {string} selector 

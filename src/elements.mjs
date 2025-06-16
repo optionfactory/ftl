@@ -3,19 +3,31 @@ import { Nodes, LightSlots } from "./dom.mjs";
 
 
 class UpgradeQueue {
-    #q = [];
+    #q = new Map();
     constructor() {
         document.addEventListener('DOMContentLoaded', () => this.#dequeue());
     }
     enqueue(el) {
-        if (!this.#q.length) {
+        if (!this.#q.size) {
             requestAnimationFrame(() => this.#dequeue());
         }
-        this.#q.push(el);
+        let resolve;
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+        })
+            .then(async () => el.upgrade())
+            .then(() => this.#q.delete(el));
+        this.#q.set(el, { promise, resolve });
+    }
+    async waitForChildrenRendered(el) {
+        const pending = Array.from(this.#q.entries())
+            .filter(([child, { promise }]) => el !== child && el.contains(child))
+            .map(([child, { promise }]) => promise);
+        await Promise.all(pending);
     }
     #dequeue() {
-        for (const el of this.#q.splice(0)) {
-            el.upgrade()
+        for (const [el, { resolve }] of this.#q) {
+            resolve();
         }
     }
 }
@@ -127,6 +139,9 @@ class Registry {
             throw new Error(`missing template: '${k}'`);
         }
         return template.withData(this.#data).withModules(this.#modules);
+    }
+    async waitForChildrenRendered(el) {
+        await this.#upgrades.waitForChildrenRendered(el);
     }
     component(name) {
         return this.#components[name];
