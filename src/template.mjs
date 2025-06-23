@@ -192,6 +192,20 @@ class Template {
         this.#dataStack = dataStack;
     }
     /**
+     * Creates a new Template replacing the modules and dataStack from a context.
+     * @param {{modules: { [x: string]: any; } | null | undefined, dataStack: any[]}} context
+     */
+    withContext({modules, dataStack}){
+        return new Template(this.#fragment, modules, dataStack);
+    }
+    /**
+     * Creates a new Template replacing the modules and dataStack from a registry.
+     * @param any registry
+     */
+    withContextFrom(registry){
+        return this.withContext(registry.context());
+    }
+    /**
      * Creates a new Template replacing the fragment.
      * @param {DocumentFragment} fragment
      */

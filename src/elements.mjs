@@ -148,6 +148,12 @@ class Registry {
     async waitForChildrenRendered(el) {
         await this.#upgrades.waitForChildrenRendered(el);
     }
+    context() {
+        return {
+            modules: this.#modules,
+            dataStack: this.#data
+        }
+    }
     component(name) {
         return this.#components[name];
     }
