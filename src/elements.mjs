@@ -11,12 +11,17 @@ class UpgradeQueue {
         if (!this.#q.size) {
             requestAnimationFrame(() => this.#dequeue());
         }
+        if(this.#q.has(el)){
+            //already upgrading, can happen when disconnecting an element
+            //while it's already queued for upgrade (e.g.: ful-form)
+            return;
+        }
         let resolve;
         const promise = new Promise((res, rej) => {
             resolve = res;
         })
-            .then(async () => el.upgrade())
-            .then(() => this.#q.delete(el));
+            .then(() => el.upgrade())
+            .finally(() => this.#q.delete(el));
         this.#q.set(el, { promise, resolve });
     }
     async waitForChildrenRendered(el) {
