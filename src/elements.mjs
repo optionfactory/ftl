@@ -4,24 +4,27 @@ import { Nodes, LightSlots } from "./dom.mjs";
 
 class UpgradeQueue {
     #q = new Map();
-    constructor() {
-        document.addEventListener('DOMContentLoaded', () => this.#dequeue());
+    tracer; 
+    constructor(trace) {
+        document.addEventListener('DOMContentLoaded', () => this.#dequeue("dcl"));
     }
     enqueue(el) {
-        if (!this.#q.size) {
-            requestAnimationFrame(() => this.#dequeue());
-        }
+        this.tracer?.("enqueued", el);
         if(this.#q.has(el)){
             //already upgrading, can happen when disconnecting an element
             //while it's already queued for upgrade (e.g.: ful-form)
+            this.tracer?.("spurious enqueue on:", el);
             return;
+        }
+        if (this.#q.size === 0) {
+            this.tracer?.("first in queue. scheduling #dequeue");
+            //first in queue schedules the dequeing
+            requestAnimationFrame(() => this.#dequeue("raf"));
         }
         let resolve;
         const promise = new Promise((res, rej) => {
             resolve = res;
-        })
-            .then(() => el.upgrade())
-            .finally(() => this.#q.delete(el));
+        }).then(() => el.upgrade());
         this.#q.set(el, { promise, resolve });
     }
     async waitForChildrenRendered(el) {
@@ -30,8 +33,10 @@ class UpgradeQueue {
             .map(([child, { promise }]) => promise);
         await Promise.all(pending);
     }
-    #dequeue() {
+    #dequeue(source) {
+        this.tracer?.("dequeuing", this.#q.size, "elements from", source, ":", this.#q);
         for (const [el, { resolve }] of this.#q) {
+            this.#q.delete(el);
             resolve();
         }
     }
@@ -124,6 +129,12 @@ class Registry {
     plugin(p) {
         p.configure(this);
         return this;
+    }
+    trace(){
+        const tracer = (...args) => {
+            console.log("tracing", ...args);
+        }
+        this.#upgrades.tracer = tracer;
     }
     configure() {
         for (const [tag, klass] of Object.entries(this.#tagToClass)) {
