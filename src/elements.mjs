@@ -135,6 +135,7 @@ class Registry {
             console.log("tracing", ...args);
         }
         this.#upgrades.tracer = tracer;
+        return this;
     }
     configure() {
         for (const [tag, klass] of Object.entries(this.#tagToClass)) {
@@ -142,6 +143,7 @@ class Registry {
             delete this.#tagToClass[tag];
         }
         this.#configured = true;
+        return this;
     }
     template(k) {
         if (k === null || k === undefined) {
