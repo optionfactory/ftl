@@ -1,5 +1,6 @@
 // @ts-ignore
 import { parse } from "./expressions-parser.peggy";
+import { nodes } from "./ast.mjs";
 
 class EvaluatingVisitor {
     #modules;
@@ -20,22 +21,26 @@ class EvaluatingVisitor {
             }
         });
     }
-    and(node) {
+    [nodes.and](node) {
         return this.visit(node.lhs) && this.visit(node.rhs);
     }
-    or(node) {
+    [nodes.or](node) {
         return this.visit(node.lhs) || this.visit(node.rhs);
     }
-    not(node) {
+    [nodes.nc](node) {
+        const lhs = this.visit(node.lhs);
+        return lhs !== null && lhs !== undefined ? lhs : this.visit(node.rhs);
+    }
+    [nodes.not](node) {
         return !this.visit(node.expr);
     }
-    eq(node) {
+    [nodes.eq](node) {
         const lhs = this.visit(node.lhs);
         const rhs = this.visit(node.rhs);
         const eq = lhs === rhs;
         return node.op === "==" ? eq : !eq;
     }
-    cmp(node) {
+    [nodes.cmp](node) {
         const lhs = this.visit(node.lhs);
         const rhs = this.visit(node.rhs);
         switch (node.op) {
@@ -51,7 +56,7 @@ class EvaluatingVisitor {
                 throw new Error("unknown cmp op " + node.op);
         }
     }
-    call(node) {
+    [nodes.call](node) {
         const fnRef = node.value;
         const module = fnRef.module === null ? this.#modules : this.#modules?.[fnRef.module];
         if (!module) {
@@ -64,22 +69,23 @@ class EvaluatingVisitor {
         const args = node.args.map(arg => this.visit(arg));
         return fn.apply(this.#data, args);
     }
-    literal(node) {
+    [nodes.literal](node) {
         return node.value;
     }
-    symbol(node) {
+    [nodes.symbol](node) {
         return this.#data[node.value];
     }
-    dict(node) {
+    [nodes.dict](node) {
         return Object.fromEntries(node.value.map(entry => [entry[0].value, this.visit(entry[1])]));
     }
-    array(node) {
+    [nodes.array](node) {
         return node.value.map(v => this.visit(v));
     }
-    ter(node) {
-        return this.visit(node.cond) ? this.visit(node.ifTrue) : this.visit(node.ifFalse);
+    [nodes.ter](node) {
+        const cond = this.visit(node.cond);
+        return cond ? (node.ifTrue ? this.visit(node.ifTrue) : cond) : this.visit(node.ifFalse);
     }
-    nav(node) {
+    [nodes.nav](node) {
         let prev = undefined;
         let cur = this.visit(node.lhs);
         for (let i = 0; i !== node.rhs.length; ++i) {
@@ -89,22 +95,22 @@ class EvaluatingVisitor {
             }
             let value = undefined;
             switch (rhs.type) {
-                case 'dot': {
+                case nodes.dot: {
                     value = cur[rhs.rhs]
-                }
                     break;
-                case 'sub': {
+                }
+                case nodes.sub: {
                     value = cur[this.visit(rhs.rhs)]
-                }
                     break;
-                case 'method': {
+                }
+                case nodes.method: {
                     if (!cur) {
                         throw new Error(`Method missing "${node.rhs[i - 1].rhs}"`)
                     }
                     const args = rhs.args.map(arg => this.visit(arg));
                     value = cur.apply(prev, args);
-                }
                     break;
+                }
             }
             prev = cur;
             cur = value;
@@ -117,11 +123,11 @@ class EvaluatingVisitor {
     visitRoot(ast, templated) {
         return !templated ? this.visit(ast) : ast.map(node => {
             switch (node.type) {
-                case 'tel': return { type: 't', value: node.value };
-                case 'tet': return { type: 't', value: this.visit(node.value) };
-                case 'teh': return { type: 'h', value: this.visit(node.value) };
-                case 'ten': return { type: 'n', value: this.visit(node.value) };
-                default: throw new Error("unknown node type " + node.type);
+                case nodes.templated.tel: return { type: nodes.dom.t, value: node.value };
+                case nodes.templated.tet: return { type: nodes.dom.t, value: this.visit(node.value) };
+                case nodes.templated.teh: return { type: nodes.dom.h, value: this.visit(node.value) };
+                case nodes.templated.ten: return { type: nodes.dom.n, value: this.visit(node.value) };
+                default: throw new Error("unknown node type " + node.type.toString());
             }
         });
     }

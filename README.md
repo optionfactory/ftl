@@ -365,12 +365,13 @@ renders to
 - Function calls: e.g: `#module:fn()` or `#fn(1,2,3)`
 - Parenthesized expressions: e.g: `(a || b) && c`
 - Method call: e.g: `a.toLowerCase()` or `a.toLowerCase?.()`
-- Array access: e.g: `a[b]` or `a?.[b]`
+- Computed member access: e.g: `a[b]` or `a?.[b]`
 - Member access: e.g: `a.b` or `a?.b`
-- Logical not: e.g: `!a`
-- Relational operators: e.g: `a >= b` or `a > b` or `a <= b` or `a <= b`
-- Equality operators: e.g: `a == b` or `a != b`
-- Logical and expressions: e.g: `a && b`
-- Logical or expressions:e.g: `a || b`
-- Ternary operator: e.g: `a ? b : c`
+- Logical not operator: e.g: `!a`
+- Relational operator: e.g: `a >= b` or `a > b` or `a <= b` or `a <= b`
+- Equality operator: e.g: `a == b` or `a != b`
+- Logical and operator: e.g: `a && b`
+- Logical or operator: e.g: `a || b`
+- Null coalescing operator: e.g: `a ?? b`
+- Condition ternary operator: e.g: `a ? b : c`
 

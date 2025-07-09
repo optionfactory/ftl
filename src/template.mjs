@@ -1,3 +1,4 @@
+import { nodes } from "./ast.mjs";
 import { Attributes, Fragments } from "./dom.mjs";
 import { Expressions } from "./expressions.mjs";
 
@@ -128,9 +129,9 @@ class CommandsHandler {
                 continue;
             }
             switch (v.type) {
-                case 't': ops.prepend(node, document.createTextNode(v.value)); break;
-                case 'h': ops.prepend(node, Fragments.fromHtml(v.value)); break;
-                case 'n': ops.prepend(node, v.value); break;
+                case nodes.dom.t: ops.prepend(node, document.createTextNode(v.value)); break;
+                case nodes.dom.h: ops.prepend(node, Fragments.fromHtml(v.value)); break;
+                case nodes.dom.n: ops.prepend(node, v.value); break;
             }
         }
         ops.remove(node);

@@ -28,6 +28,12 @@ describe('Expression', () => {
     verify('can navigate array', "a?.['b']", [{ a: null }], undefined);
     verify('can call function from data', "a()", [{ a: () => "M" }], "M");
     verify('can evaluate ternary operator', "a ? b : c", [{ a: false, b: "lhs", c: "rhs" }], "rhs");
+    verify('can evaluate ternary operator', "a ?: c", [{ a: false, b: "lhs", c: "rhs" }], "rhs");
+    verify('can evaluate ternary operator', "a ?: b", [{ a: 'lhs', b: "rhs" }], "lhs");
+    verify('can evaluate ??', "a ?? b", [{ a: "rhs", b: "lhs" }], "rhs");
+    verify('can evaluate ??', "a ?? b", [{ a: undefined, b: "lhs" }], "lhs");
+    verify('can evaluate ??', "a ?? b", [{ a: null, b: "lhs" }], "lhs");
+    verify('can evaluate ??', "a ?? b", [{ a: false, b: "rhs" }], false);
     verify('can evaluate eq', "a == b", [{ a: 1, b: 1 }], true);
     verify('can evaluate neq', "a != b", [{ a: 1, b: 1 }], false);
     verify('can evaluate gt', "a > b", [{ a: 2, b: 1 }], true);

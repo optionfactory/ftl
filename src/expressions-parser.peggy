@@ -1,13 +1,13 @@
 {{
-
+    import { nodes } from "./ast.mjs";
 }}
 
 TemplatedRoot = TemplatedExpression*
 
-TemplatedExpression = value:(BeginNode @ExpressionRoot EndNode) { return {type:'ten', value}}
-	/ value:(BeginHtml @ExpressionRoot EndHtml) { return {type:'teh', value}}
-	/ value:(BeginText @ExpressionRoot EndText) { return {type:'tet', value}} 
-	/ value:TemplatedText { return {type:'tel', value}}
+TemplatedExpression = value:(BeginNode @ExpressionRoot EndNode) { return {type:nodes.templated.ten, value}}
+	/ value:(BeginHtml @ExpressionRoot EndHtml) { return {type:nodes.templated.teh, value}}
+	/ value:(BeginText @ExpressionRoot EndText) { return {type:nodes.templated.tet, value}} 
+	/ value:TemplatedText { return {type:nodes.templated.tel, value}}
 
 BeginNode = '{{{{'
 EndNode = '}}}}'	
@@ -32,56 +32,60 @@ ExpressionRoot
 Expression = TernaryExpression
 
 TernaryExpression 
-    = cond:OrExpression _ "?" _ ifTrue:TernaryExpression? _ ":" _ ifFalse:TernaryExpression { return {type:"ter", cond, ifTrue, ifFalse}; }
+    = cond:NullCoalescingExpression _ "?" _ ifTrue:TernaryExpression? _ ":" _ ifFalse:TernaryExpression { return {type:nodes.ter, cond, ifTrue, ifFalse}; }
+    / NullCoalescingExpression
+
+NullCoalescingExpression
+    = lhs:OrExpression _ "??" _ rhs:NullCoalescingExpression { return {type:nodes.nc, lhs, rhs}; } 
     / OrExpression
 
 OrExpression 
-    = lhs:AndExpression _ "||" _ rhs:OrExpression { return {type:"or", lhs, rhs} }
+    = lhs:AndExpression _ "||" _ rhs:OrExpression { return {type:nodes.or, lhs, rhs} }
     / AndExpression
 
 AndExpression
-    = lhs:EqExpression _ "&&" _ rhs:AndExpression { return {type:"and", lhs, rhs} }
+    = lhs:EqExpression _ "&&" _ rhs:AndExpression { return {type:nodes.and, lhs, rhs} }
     / EqExpression
 
 EqExpression
-    = lhs:RelExpression _ op:EqualityOp _ rhs:EqExpression { return {type:"eq", op, lhs, rhs} }
+    = lhs:RelExpression _ op:EqualityOp _ rhs:EqExpression { return {type:nodes.eq, op, lhs, rhs} }
     / RelExpression
 
 RelExpression
-    = lhs:NotExpression _ op:RelationalOp _ rhs:RelExpression { return {type:"cmp", op, lhs, rhs} }
+    = lhs:NotExpression _ op:RelationalOp _ rhs:RelExpression { return {type:nodes.cmp, op, lhs, rhs} }
     / NotExpression
 
 NotExpression
-    = "!" _ expr:NotExpression { return {type:"not", expr} }
-    / Navigation
+    = "!" _ expr:NotExpression { return {type:nodes.not, expr} }
+    / Access
 
 
-Navigation    
-    = lhs:ParensExpression _ rhs:(@NavigationExpression _)+ { return {type: "nav", lhs, rhs} }   
-    / ParensExpression
+Access    
+    = lhs:GroupingExpression _ rhs:(@AccessExpression _)+ { return {type: nodes.nav, lhs, rhs} }   
+    / GroupingExpression
 
 
-NavigationExpression 
-    = NavigationMemberAccess 
-    / NavigationSubscript 
-    / NavigationMethod
+AccessExpression 
+    = AccessMember
+    / AccessSubscript 
+    / AccessMethodCall
     
-NavigationMemberAccess "member-access"
+AccessMember "member"
     = op:("?."/".") _ rhs:Symbol { 
-        return {type: "dot", ns: op === '?.', rhs: rhs.value}; 
+        return {type: nodes.dot, ns: op === '?.', rhs: rhs.value}; 
     }
 
-NavigationSubscript "subscript" 
+AccessSubscript "subscript" 
     = op:"?."? "[" _ rhs:Expression _ "]"  { 
-        return {type: "sub", ns: op !== null, rhs}; 
+        return {type: nodes.sub, ns: op !== null, rhs}; 
     } 
 
-NavigationMethod "method-call" 
+AccessMethodCall "method-call" 
     = op:"?."? "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" { 
-        return {type: "method", ns: op !== null, args: h === null ? [] : [h, ...t]}; 
+        return {type: nodes.method, ns: op !== null, args: h === null ? [] : [h, ...t]}; 
     }
 
-ParensExpression 
+GroupingExpression 
     = "(" _ e:Expression _ ")" { return e }
     / FunctionCall 
     / AnyLiteral
@@ -91,7 +95,7 @@ ParensExpression
 FunctionCall "function-call" 
     = fn:FunctionRef "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" {
         const args = h === null ? [] : [h, ...t];
-        return {type: "call", value: fn, args};
+        return {type: nodes.call, value: fn, args};
     }
 
 AnyLiteral
@@ -103,24 +107,24 @@ AnyLiteral
 
 BooleanLiteral "boolean"
     = "true" { 
-        return {type: "literal", value: true}; 
+        return {type: nodes.literal, value: true}; 
     }
     / "false" { 
-        return {type: "literal", value: false}; 
+        return {type: nodes.literal, value: false}; 
     }
 
 NumberLiteral "number" = p:$[0-9]+ s:("." @$[0-9]*)? { 
-    return { type: "literal", value: s === null ? parseInt(p) : parseFloat(p +"." + s)};
+    return { type: nodes.literal, value: s === null ? parseInt(p) : parseFloat(p +"." + s)};
 }
 
 StringLiteral "string"
-    = "'" value:$[^']* "'"  { return {type: "literal", value}; }
-    / '"' value:$[^"]* '"'  { return {type: "literal", value}; }
+    = "'" value:$[^']* "'"  { return {type: nodes.literal, value}; }
+    / '"' value:$[^"]* '"'  { return {type: nodes.literal, value}; }
 
 ArrayLiteral "array" 
     = "[" _ h:(Expression)? _ t:("," _ @Expression _)* "]" { 
         const value = h === null ? [] : [h, ...t];
-        return {type: "array", value};
+        return {type: nodes.array, value};
     }
 
 DictLiteral "dict" 
@@ -130,17 +134,17 @@ DictLiteral "dict"
             value.push(h);
         }
         value.push.apply(value, t);
-        return {type: "dict", value};   
+        return {type: nodes.dict, value};   
     }
 
 FunctionRef "function-ref"
     = '#' module:(@$[a-zA-Z$_]+ ':')? p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* {
-        return {type: 'function', module, value: p + s}
+        return {type: nodes.function, module, value: p + s}
     }
 
 Symbol "symbol"
     = p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* { 
-        return {type: "symbol", value: p + s}; 
+        return {type: nodes.symbol, value: p + s}; 
     }
     
 AccessOp 
