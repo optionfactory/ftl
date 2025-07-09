@@ -37,7 +37,7 @@ class NodeOperations {
 
 class CommandsHandler {
     static ORDERED_COMMANDS = [
-        'tplIf', 'tplWith', 'tplEach', 'tplWhen', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove'
+        'tplIf', 'tplWith', 'tplEach', 'tplWhen', 'tplClassAppend', 'tplAttrAppend', 'tplText', 'tplHtml', 'tplRemove', 'tplVerbatim'
     ];
     static tplIf(node, expression, ops, modules, dataStack) {
         const accept = Expressions.interpret(modules, dataStack, expression);
@@ -69,13 +69,23 @@ class CommandsHandler {
             ops.remove(node);
         }
     }
+    static tplVerbatim(node, expression, ops, modules, dataStack){
+        const newNode = node.cloneNode(true);
+        ops.replace(node, newNode);
+    }
     static tplRemove(node, value, ops, modules, dataStack) {
         switch (value.toLowerCase()) {
             case 'tag':
                 const fragment = new DocumentFragment();
                 fragment.append(...node.childNodes);
-                ops.append(node, fragment);
-                ops.remove(node);
+                if('tplVerbatim' in node.dataset){
+                    //we are removing the parent element so we have to handle the lower priority commands
+                    ops.popData(node, 'tplVerbatim');
+                    ops.replace(node, fragment);
+                }else {
+                    ops.append(node, fragment);
+                    ops.remove(node);
+                }
                 break;
             case 'body':
                 node.replaceChildren();
