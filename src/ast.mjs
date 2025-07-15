@@ -1,33 +1,31 @@
 const nodes = {
-    ter: Symbol("ter"),
-    nc: Symbol("nc"),
+    ter: Symbol("tenary"),
+    nullc: Symbol("null-coalescion"),
     or: Symbol("or"),
     and: Symbol("and"),
     eq: Symbol("eq"),
     cmp: Symbol("cmp"),
     not: Symbol("not"),
-    nav: Symbol("nav"),
-    dot: Symbol("dot"),
-    sub: Symbol("sub"),
-    method: Symbol("method"),
-    call: Symbol("call"),
+    access: Symbol("access"),
+    member: Symbol("access-member"),
+    subscript: Symbol("access-subscript"),
+    method: Symbol("access-method-call"),
+    call: Symbol("module-function-call"),
     literal: Symbol("literal"),
-    array: Symbol("array"),
-    dict: Symbol("dict"),
-    function: Symbol("function"),
+    array: Symbol("array-literal"),
+    dict: Symbol("dict-literal"),
+    function: Symbol("module-function"),
     symbol: Symbol("symbol"),
-    //
     templated: {
-        ten: Symbol("ten"),
-        teh: Symbol("teh"),
-        tet: Symbol("tet"),
-        tel: Symbol("tel"),
+        ten: Symbol("templeted-node"),
+        teh: Symbol("templated-html"),
+        tet: Symbol("templated-text"),
+        tel: Symbol("templated-literal"),
     },
-    //
     dom: {
-        t: Symbol("t"),
-        h: Symbol("h"),
-        n: Symbol("n")
+        t: Symbol("text"),
+        h: Symbol("html"),
+        n: Symbol("node")
     }
 
 }

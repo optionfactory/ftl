@@ -27,7 +27,7 @@ class EvaluatingVisitor {
     [nodes.or](node) {
         return this.visit(node.lhs) || this.visit(node.rhs);
     }
-    [nodes.nc](node) {
+    [nodes.nullc](node) {
         const lhs = this.visit(node.lhs);
         return lhs !== null && lhs !== undefined ? lhs : this.visit(node.rhs);
     }
@@ -85,7 +85,7 @@ class EvaluatingVisitor {
         const cond = this.visit(node.cond);
         return cond ? (node.ifTrue ? this.visit(node.ifTrue) : cond) : this.visit(node.ifFalse);
     }
-    [nodes.nav](node) {
+    [nodes.access](node) {
         let prev = undefined;
         let cur = this.visit(node.lhs);
         for (let i = 0; i !== node.rhs.length; ++i) {
@@ -95,11 +95,11 @@ class EvaluatingVisitor {
             }
             let value = undefined;
             switch (rhs.type) {
-                case nodes.dot: {
+                case nodes.member: {
                     value = cur[rhs.rhs]
                     break;
                 }
-                case nodes.sub: {
+                case nodes.subscript: {
                     value = cur[this.visit(rhs.rhs)]
                     break;
                 }

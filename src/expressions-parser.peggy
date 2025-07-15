@@ -36,7 +36,7 @@ TernaryExpression
     / NullCoalescingExpression
 
 NullCoalescingExpression
-    = lhs:OrExpression _ "??" _ rhs:NullCoalescingExpression { return {type:nodes.nc, lhs, rhs}; } 
+    = lhs:OrExpression _ "??" _ rhs:NullCoalescingExpression { return {type:nodes.nullc, lhs, rhs}; } 
     / OrExpression
 
 OrExpression 
@@ -61,7 +61,7 @@ NotExpression
 
 
 Access    
-    = lhs:GroupingExpression _ rhs:(@AccessExpression _)+ { return {type: nodes.nav, lhs, rhs} }   
+    = lhs:GroupingExpression _ rhs:(@AccessExpression _)+ { return {type: nodes.access, lhs, rhs} }   
     / GroupingExpression
 
 
@@ -72,12 +72,12 @@ AccessExpression
     
 AccessMember "member"
     = op:("?."/".") _ rhs:Symbol { 
-        return {type: nodes.dot, ns: op === '?.', rhs: rhs.value}; 
+        return {type: nodes.member, ns: op === '?.', rhs: rhs.value}; 
     }
 
 AccessSubscript "subscript" 
     = op:"?."? "[" _ rhs:Expression _ "]"  { 
-        return {type: nodes.sub, ns: op !== null, rhs}; 
+        return {type: nodes.subscript, ns: op !== null, rhs}; 
     } 
 
 AccessMethodCall "method-call" 
@@ -87,13 +87,13 @@ AccessMethodCall "method-call"
 
 GroupingExpression 
     = "(" _ e:Expression _ ")" { return e }
-    / FunctionCall 
+    / ModuleFunctionCall 
     / AnyLiteral
     / Symbol
 
 
-FunctionCall "function-call" 
-    = fn:FunctionRef "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" {
+ModuleFunctionCall "module-function-call" 
+    = fn:ModuleFunction "(" _ h:(@Expression _)? t:("," _ @Expression _)* ")" {
         const args = h === null ? [] : [h, ...t];
         return {type: nodes.call, value: fn, args};
     }
@@ -105,7 +105,7 @@ AnyLiteral
     / ArrayLiteral
     / DictLiteral
 
-BooleanLiteral "boolean"
+BooleanLiteral "boolean-literal"
     = "true" { 
         return {type: nodes.literal, value: true}; 
     }
@@ -113,21 +113,21 @@ BooleanLiteral "boolean"
         return {type: nodes.literal, value: false}; 
     }
 
-NumberLiteral "number" = p:$[0-9]+ s:("." @$[0-9]*)? { 
+NumberLiteral "number-literal" = p:$[0-9]+ s:("." @$[0-9]*)? { 
     return { type: nodes.literal, value: s === null ? parseInt(p) : parseFloat(p +"." + s)};
 }
 
-StringLiteral "string"
+StringLiteral "string-literal"
     = "'" value:$[^']* "'"  { return {type: nodes.literal, value}; }
     / '"' value:$[^"]* '"'  { return {type: nodes.literal, value}; }
 
-ArrayLiteral "array" 
+ArrayLiteral "array-literal" 
     = "[" _ h:(Expression)? _ t:("," _ @Expression _)* "]" { 
         const value = h === null ? [] : [h, ...t];
         return {type: nodes.array, value};
     }
 
-DictLiteral "dict" 
+DictLiteral "dict-literal" 
     = "{" _ h:(@StringLiteral _ ":" _ @Expression)? _ t:("," _ @StringLiteral _ ":" _ @Expression _)* "}" {
         var value = []
         if (h !== null){
@@ -137,7 +137,7 @@ DictLiteral "dict"
         return {type: nodes.dict, value};   
     }
 
-FunctionRef "function-ref"
+ModuleFunction "module-function"
     = '#' module:(@$[a-zA-Z$_]+ ':')? p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* {
         return {type: nodes.function, module, value: p + s}
     }
