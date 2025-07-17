@@ -42,7 +42,7 @@
                 this.template().withOverlay({ items }).renderTo(this);
                 //if you need to access nested custom components making sure
                 //their .render() call has completed, you can:
-                await ftl.registry.waitForChildrenRendered(this);
+                await ftl.Rendering.waitForChildren(this);
                 console.log(".render() completed on all children");
             }
         }

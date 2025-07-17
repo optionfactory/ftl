@@ -4,20 +4,16 @@ import { Nodes, LightSlots } from "./dom.mjs";
 
 class UpgradeQueue {
     #q = new Map();
-    tracer; 
-    constructor(trace) {
+    constructor() {
         document.addEventListener('DOMContentLoaded', () => this.#dequeue("dcl"));
     }
     enqueue(el) {
-        this.tracer?.("enqueued", el);
-        if(this.#q.has(el)){
+        if (this.#q.has(el)) {
             //already upgrading, can happen when disconnecting an element
             //while it's already queued for upgrade (e.g.: ful-form)
-            this.tracer?.("spurious enqueue on:", el);
             return;
         }
         if (this.#q.size === 0) {
-            this.tracer?.("first in queue. scheduling #dequeue");
             //first in queue schedules the dequeing
             requestAnimationFrame(() => this.#dequeue("raf"));
         }
@@ -27,14 +23,10 @@ class UpgradeQueue {
         }).then(() => el.upgrade());
         this.#q.set(el, { promise, resolve });
     }
-    async waitForChildrenRendered(el) {
-        const pending = Array.from(this.#q.entries())
-            .filter(([child, { promise }]) => el !== child && el.contains(child))
-            .map(([child, { promise }]) => promise);
-        await Promise.all(pending);
+    get entries() {
+        return this.#q.entries();
     }
     #dequeue(source) {
-        this.tracer?.("dequeuing", this.#q.size, "elements from", source, ":", this.#q);
         for (const [el, { resolve }] of this.#q) {
             this.#q.delete(el);
             resolve();
@@ -44,8 +36,6 @@ class UpgradeQueue {
 
 class Registry {
     #tagToClass = {};
-    #idToTemplate = {};
-    #id = 0;
     #configured = false;
     #mappers = {
         'string': attr => attr,
@@ -58,15 +48,7 @@ class Registry {
     #components = {};
     #modules;
     #data = [];
-    #upgrades = new UpgradeQueue();
-    defineTemplate(id, html) {
-        if (html === null || html === undefined) {
-            return undefined;
-        }
-        const tid = id ?? `unnamed-${++this.#id}`;
-        this.#idToTemplate[tid] = Template.fromHtml(html);
-        return tid;
-    }
+    #upgradeQueue = new UpgradeQueue();
     defineElement(tag, klass) {
         if (!this.#configured) {
             this.#tagToClass[tag] = klass;
@@ -89,15 +71,15 @@ class Registry {
         const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers?.[type] ?? this.#mappers[type]]);
         const attrToMapper = Object.fromEntries(attrsAndMappers);
 
-        const templateNamesAndIds = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, registry.defineTemplate(null, v)]);
-        const templateNameToId = Object.fromEntries(templateNamesAndIds);
+        const namesAndTemplates = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, Template.fromHtml(v)]);
+        const nameToTemplate = Object.fromEntries(namesAndTemplates);
 
         klass.BITS = {
-            enqueue: (el) => this.#upgrades.enqueue(el),
+            enqueue: (el) => this.#upgradeQueue.enqueue(el),
             SLOTS: slots,
             ATTR_TO_MAPPER: attrToMapper,
             ATTRS_AND_MAPPERS: attrsAndMappers,
-            TEMPLATE_NAME_TO_ID: templateNameToId
+            TEMPLATES: nameToTemplate
         }
         customElements.define(tag, klass);
     }
@@ -130,13 +112,6 @@ class Registry {
         p.configure(this);
         return this;
     }
-    trace(){
-        const tracer = (...args) => {
-            console.log("tracing", ...args);
-        }
-        this.#upgrades.tracer = tracer;
-        return this;
-    }
     configure() {
         for (const [tag, klass] of Object.entries(this.#tagToClass)) {
             this.#augmentAndDefineElement(tag, klass);
@@ -145,27 +120,11 @@ class Registry {
         this.#configured = true;
         return this;
     }
-    template(k) {
-        if (k === null || k === undefined) {
-            return undefined;
-        }
-        if (!this.#configured) {
-            throw new Error("ElementsRegistry is not configured");
-        }
-        const template = this.#idToTemplate[k];
-        if (!template) {
-            throw new Error(`missing template: '${k}'`);
-        }
-        return template.withData(this.#data).withModules(this.#modules);
-    }
-    async waitForChildrenRendered(el) {
-        await this.#upgrades.waitForChildrenRendered(el);
+    get upgrades() {
+        return this.#upgradeQueue.entries;
     }
     context() {
-        return {
-            modules: this.#modules,
-            dataStack: this.#data
-        }
+        return { modules: this.#modules, data: this.#data };
     }
     component(name) {
         return this.#components[name];
@@ -174,13 +133,49 @@ class Registry {
 
 const registry = new Registry();
 
+class Templates {
+    static templateFromHtml(html) {
+        const { modules, data } = registry.context()
+        return Template.fromHtml(html, modules, ...data);
+    }
+    static templateFromSelector(selector) {
+        const { modules, data } = registry.context()
+        return Template.fromHtml(selector, modules, ...data);
+    }
+    static templateFromTemplate(templateEl) {
+        const { modules, data } = registry.context()
+        return Template.fromTemplate(templateEl, modules, ...data);
+    }
+    static templateFromFragment(fragment) {
+        const { modules, data } = registry.context()
+        return Template.fromFragment(fragment, modules, ...data);
+    }
+}
+
+class Rendering {
+    static async waitFor(el) {
+        const pending = Array.from(registry.upgrades)
+            .filter(([child, { promise }]) => el.contains(child))
+            .map(([child, { promise }]) => promise);
+        await Promise.all(pending);
+    }
+    static async waitForChildren(el) {
+        const pending = Array.from(registry.upgrades)
+            .filter(([child, { promise }]) => el !== child && el.contains(child))
+            .map(([child, { promise }]) => promise);
+        await Promise.all(pending);
+    }
+
+}
+
 class ParsedElement extends HTMLElement {
     static BITS = {
         enqueue: (el) => { },
         SLOTS: false,
         ATTR_TO_MAPPER: {},
-        ATTR_AND_MAPPERS: [],
-        TEMPLATE_NAME_TO_ID: {}
+        /** @type [string, Function][] */
+        ATTRS_AND_MAPPERS: [],
+        TEMPLATES: {}
     }
     static get observedAttributes() {
         return Object.keys(this.BITS.ATTR_TO_MAPPER);
@@ -191,7 +186,8 @@ class ParsedElement extends HTMLElement {
         return /** @type {typeof ParsedElement} */(this.constructor).BITS;
     }
     template(name) {
-        return registry.template(this.#bits().TEMPLATE_NAME_TO_ID[name ?? 'default']);
+        const { modules, data } = registry.context();
+        return this.#bits().TEMPLATES[name ?? 'default'].withData(data).withModules(modules);
     }
     connectedCallback() {
         if (this.#parsed) {
@@ -254,4 +250,4 @@ class ParsedElement extends HTMLElement {
 }
 
 
-export { Registry, registry, ParsedElement };
+export { Registry, registry, Templates, Rendering, ParsedElement };

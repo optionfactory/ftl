@@ -204,10 +204,10 @@ class Template {
     }
     /**
      * Creates a new Template replacing the modules and dataStack from a context.
-     * @param {{modules: { [x: string]: any; } | null | undefined, dataStack: any[]}} context
+     * @param {{modules: { [x: string]: any; } | null | undefined, data: any[]}} context
      */
-    withContext({modules, dataStack}){
-        return new Template(this.#fragment, modules, dataStack);
+    withContext({modules, data}){
+        return new Template(this.#fragment, modules, data);
     }
     /**
      * Creates a new Template replacing the modules and dataStack from a registry.
