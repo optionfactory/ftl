@@ -24,7 +24,6 @@
         test
     </parent-element>
 
-
     <script>
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -65,6 +64,11 @@
             .defineElement("parent-element", Parent)
             .defineElement("nested-element", Children)
             .configure();
+    </script>
+    <script>
+        document.addEventListener('ftl:ready', () => {
+            console.log("ftl:ready!");
+        });
     </script>
 </body>
 

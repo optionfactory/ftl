@@ -5,7 +5,14 @@ import { Nodes, LightSlots } from "./dom.mjs";
 class UpgradeQueue {
     #q = new Map();
     constructor() {
-        document.addEventListener('DOMContentLoaded', () => this.#dequeue("dcl"));
+        document.addEventListener('DOMContentLoaded', async () => {
+            const pending = Array.from(this.entries).map(([child, promise ]) => promise);
+            await Promise.all(pending);
+            document.dispatchEvent(new CustomEvent('ftl:ready', {
+                bubbles: false,
+                cancelable: false,
+            }));
+        });
     }
     enqueue(el) {
         if (this.#q.has(el)) {
@@ -13,24 +20,16 @@ class UpgradeQueue {
             //while it's already queued for upgrade (e.g.: ful-form)
             return;
         }
-        if (this.#q.size === 0) {
-            //first in queue schedules the dequeing
-            requestAnimationFrame(() => this.#dequeue("raf"));
-        }
         let resolve;
-        const promise = new Promise((res, rej) => {
-            resolve = res;
-        }).then(() => el.upgrade());
-        this.#q.set(el, { promise, resolve });
+        const promise = new Promise((res, rej) => { resolve = res; })
+            .then(() => el.upgrade())
+            .finally(() => this.#q.delete(el));
+        this.#q.set(el, promise);
+        //@ts-ignore
+        resolve();
     }
     get entries() {
         return this.#q.entries();
-    }
-    #dequeue(source) {
-        for (const [el, { resolve }] of this.#q) {
-            this.#q.delete(el);
-            resolve();
-        }
     }
 }
 
@@ -161,8 +160,8 @@ class Rendering {
     }
     static async waitForChildren(el) {
         const pending = Array.from(registry.upgrades)
-            .filter(([child, { promise }]) => el !== child && el.contains(child))
-            .map(([child, { promise }]) => promise);
+            .filter(([child, promise]) => el !== child && el.contains(child))
+            .map(([child, promise]) => promise);
         await Promise.all(pending);
     }
 
