@@ -133,19 +133,19 @@ class Registry {
 const registry = new Registry();
 
 class Templates {
-    static templateFromHtml(html) {
+    static fromHtml(html) {
         const { modules, data } = registry.context()
         return Template.fromHtml(html, modules, ...data);
     }
-    static templateFromSelector(selector) {
+    static fromSelector(selector) {
         const { modules, data } = registry.context()
         return Template.fromHtml(selector, modules, ...data);
     }
-    static templateFromTemplate(templateEl) {
+    static fromTemplate(templateEl) {
         const { modules, data } = registry.context()
         return Template.fromTemplate(templateEl, modules, ...data);
     }
-    static templateFromFragment(fragment) {
+    static fromFragment(fragment) {
         const { modules, data } = registry.context()
         return Template.fromFragment(fragment, modules, ...data);
     }
