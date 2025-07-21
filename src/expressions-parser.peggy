@@ -17,14 +17,11 @@ BeginText = '{{'
 EndText = '}}'
 
 TemplatedText
-    = v:(
-        '\\'@'{'
-        / ('\\'@'}')
-        / @[^{}] 
-        / @'{' !'{' 
-        / @'}' !'}'
-    )+ { return v.join(""); }
-
+    = parts:(
+        $( [^\\{]+ )       // normal text
+        / '\\' c:. { return c; } //escaped
+        / '{' !'{'           // single brace that isn't a delimiter
+    )+ { return parts.join(''); }
 
 ExpressionRoot
     = _ r:Expression _ { return r; }
@@ -32,7 +29,11 @@ ExpressionRoot
 Expression = TernaryExpression
 
 TernaryExpression 
-    = cond:NullCoalescingExpression _ "?" _ ifTrue:TernaryExpression? _ ":" _ ifFalse:TernaryExpression { return {type:nodes.ter, cond, ifTrue, ifFalse}; }
+    = cond:ElvisExpression _ "?" _ ifTrue:TernaryExpression _ ":" _ ifFalse:TernaryExpression { return {type:nodes.ter, cond, ifTrue, ifFalse}; }
+    / ElvisExpression
+
+ElvisExpression
+    = cond:NullCoalescingExpression _ "?:" _ ifFalse:ElvisExpression {return {type:nodes.ter, cond, ifFalse}; }
     / NullCoalescingExpression
 
 NullCoalescingExpression
@@ -40,20 +41,41 @@ NullCoalescingExpression
     / OrExpression
 
 OrExpression 
-    = lhs:AndExpression _ "||" _ rhs:OrExpression { return {type:nodes.or, lhs, rhs} }
-    / AndExpression
+    = head:AndExpression tail:(_ "||" _ @rhs:AndExpression)* {
+        let result = head;
+        for (const rhs of tail) {
+            result = {type: nodes.or, lhs: result, rhs};
+        }
+        return result;
+    }
 
 AndExpression
-    = lhs:EqExpression _ "&&" _ rhs:AndExpression { return {type:nodes.and, lhs, rhs} }
-    / EqExpression
+    = head:EqExpression tail:(_ "&&" _ @rhs:EqExpression)* { 
+        let result = head;
+        for (const rhs of tail) {
+            result = {type: nodes.and, lhs: result, rhs};
+        }
+        return result;
+    }
 
 EqExpression
-    = lhs:RelExpression _ op:EqualityOp _ rhs:EqExpression { return {type:nodes.eq, op, lhs, rhs} }
-    / RelExpression
+    = head:RelExpression tail:(_ op:EqualityOp _ rhs:RelExpression {return {op, rhs};})* { 
+        let result = head;
+        for (const element of tail) {
+            result = {type: nodes.eq, op: element.op, lhs: result, rhs: element.rhs};
+        }
+        return result;
+    }
 
 RelExpression
-    = lhs:NotExpression _ op:RelationalOp _ rhs:RelExpression { return {type:nodes.cmp, op, lhs, rhs} }
-    / NotExpression
+    = head:NotExpression tail:(_ op:RelationalOp _ rhs:NotExpression {return {op, rhs};})* {
+        let result = head;
+        for (const element of tail) {
+            result = {type: nodes.cmp, op: element.op, lhs: result, rhs: element.rhs};
+        }
+        return result;
+    }
+
 
 NotExpression
     = "!" _ expr:NotExpression { return {type:nodes.not, expr} }
@@ -113,9 +135,10 @@ BooleanLiteral "boolean-literal"
         return {type: nodes.literal, value: false}; 
     }
 
-NumberLiteral "number-literal" = p:$[0-9]+ s:("." @$[0-9]*)? { 
-    return { type: nodes.literal, value: s === null ? parseInt(p) : parseFloat(p +"." + s)};
-}
+NumberLiteral "number-literal" 
+    = value:$( '-'? ([0-9]+ ('.' [0-9]*)? / '.' [0-9]+ ) ) {
+        return { type: nodes.literal, value: parseFloat(value) };
+    }
 
 StringLiteral "string-literal"
     = "'" value:$[^']* "'"  { return {type: nodes.literal, value}; }
@@ -147,10 +170,6 @@ Symbol "symbol"
         return {type: nodes.symbol, value: p + s}; 
     }
     
-AccessOp 
-    = "."
-    / "?."
-
 EqualityOp
     = "=="
     / "!="

@@ -3,7 +3,6 @@ import { Expressions } from "../dist/ftl.mjs";
 import { strict as assert } from 'node:assert';
 import { it, describe } from 'node:test';
 
-
 const modules = {
     one: () => 1,
     math: {
@@ -14,11 +13,30 @@ const modules = {
     }
 };
 
+describe('associativity', () => {
+
+    const json_replacer = (key, value) => typeof value === 'symbol'?  value.toString() : value;
+    const ast = (description, expression, expected) => {
+        it(description, () => {
+            assert.deepStrictEqual(JSON.stringify(Expressions.parse(expression, Expressions.MODE_EXPRESSION), json_replacer), expected);
+        });
+    }
+    ast("eq is left-associative", "1 == 1 == true", '{"type":"Symbol(eq)","op":"==","lhs":{"type":"Symbol(eq)","op":"==","lhs":{"type":"Symbol(literal)","value":1},"rhs":{"type":"Symbol(literal)","value":1}},"rhs":{"type":"Symbol(literal)","value":true}}');
+    ast("or is left-associative", "false || false || true", '{"type":"Symbol(or)","lhs":{"type":"Symbol(or)","lhs":{"type":"Symbol(literal)","value":false},"rhs":{"type":"Symbol(literal)","value":false}},"rhs":{"type":"Symbol(literal)","value":true}}');
+    ast("and is left-associative", "true && true && false", '{"type":"Symbol(and)","lhs":{"type":"Symbol(and)","lhs":{"type":"Symbol(literal)","value":true},"rhs":{"type":"Symbol(literal)","value":true}},"rhs":{"type":"Symbol(literal)","value":false}}');    
+    ast("cmp is left-associative", "1 >= 2 > 3 < 4 <= 5", '{"type":"Symbol(cmp)","op":"<=","lhs":{"type":"Symbol(cmp)","op":"<","lhs":{"type":"Symbol(cmp)","op":">","lhs":{"type":"Symbol(cmp)","op":">=","lhs":{"type":"Symbol(literal)","value":1},"rhs":{"type":"Symbol(literal)","value":2}},"rhs":{"type":"Symbol(literal)","value":3}},"rhs":{"type":"Symbol(literal)","value":4}},"rhs":{"type":"Symbol(literal)","value":5}}');    
+    ast("ternary is right-associative", "1 ? 2 : 3 ? 4 : 5", '{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":1},"ifTrue":{"type":"Symbol(literal)","value":2},"ifFalse":{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":3},"ifTrue":{"type":"Symbol(literal)","value":4},"ifFalse":{"type":"Symbol(literal)","value":5}}}');    
+    ast("elvis is right-associative", "1 ?: 2 ?: 3", '{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":1},"ifFalse":{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":2},"ifFalse":{"type":"Symbol(literal)","value":3}}}');    
+    ast("null-coalescing is right-associative", "1 ?? 2 ?? 3", '{"type":"Symbol(null-coalescion)","lhs":{"type":"Symbol(literal)","value":1},"rhs":{"type":"Symbol(null-coalescion)","lhs":{"type":"Symbol(literal)","value":2},"rhs":{"type":"Symbol(literal)","value":3}}}');    
+
+});
+
 const verify = (description, expr, data, expected) => {
     it(description || `${expr} == ${expected}`, () => {
         assert.deepStrictEqual(Expressions.interpret(modules, data, expr), expected);
     })
 }
+
 
 describe('Expression', () => {
     verify('can use member access', "a.b.c", [{ a: { b: { c: 1 } } }], 1);
@@ -48,11 +66,15 @@ describe('Expression', () => {
     verify('can call a function in module', "#math:isEven(2)", [], true)
     verify('can reference data using this in a module function', "#accessData()", [{a:1}, {a:2}], 2)
     verify("can evaluate multiple !", "!!!!!!!!!!!a", [{ a: true }], false);
+    verify("can use empty dict literal", "{}", [{}], {});
     verify("can use dict literal", "{'a': true, 'b': false}", [{}], { a: true, b: false });
+    verify("can use empty array literal", "[]", [{}], []);
     verify("can use array literal", "[1,2]", [{}], [1, 2]);
     verify("can use string literal", '"abc"', [{}], "abc");
     verify("can use string literal", "'abc'", [{}], "abc");
     verify("can use number literal", "12.3", [{}], 12.3);
+    verify("can use number literal", "-12.3", [{}], -12.3);
+    verify("can use number literal", "-.3", [{}], -.3);
     verify(null, "(!a && !b) == !(a || b)", [{ a: true, b: false }], true);
     verify(null, "!a && !b == !(a || b)", [{ a: true, b: false }], false);
     verify(null, "a.b[c.d].toLowerCase()", [{ a: { b: { z: "M" } }, c: { d: "z" } }], "m");

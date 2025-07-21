@@ -7,6 +7,7 @@ function mockdom(html) {
     globalThis.DocumentFragment = jsdom.window.DocumentFragment;
     globalThis.NodeFilter = jsdom.window.NodeFilter;
     globalThis.HTMLElement = jsdom.window.HTMLElement;
+    globalThis.CustomEvent = jsdom.window.CustomEvent;
     return jsdom;
 }
 
