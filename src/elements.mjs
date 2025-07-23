@@ -4,6 +4,7 @@ import { Nodes, LightSlots } from "./dom.mjs";
 
 class UpgradeQueue {
     #q = new Map();
+    #scheduled = false;
     constructor() {
         document.addEventListener('DOMContentLoaded', async () => {
             const pending = Array.from(this.entries).map(([child, promise ]) => promise);
@@ -20,13 +21,22 @@ class UpgradeQueue {
             //while it's already queued for upgrade (e.g.: ful-form)
             return;
         }
+        if (!this.#scheduled) {
+            //first in queue schedules the dequeing
+            this.#scheduled = true;
+            requestAnimationFrame(() => this.#dequeue("raf"));
+        }
         let resolve;
-        const promise = new Promise((res, rej) => { resolve = res; })
+        const promise = new Promise((res, rej) => {resolve = res;})
             .then(() => el.upgrade())
             .finally(() => this.#q.delete(el));
-        this.#q.set(el, promise);
-        //@ts-ignore
-        resolve();
+        this.#q.set(el, { promise, resolve });
+    }
+    #dequeue(source) {
+        this.#scheduled = false;
+        for (const [el, { resolve }] of this.#q) {
+            resolve();
+        }
     }
     get entries() {
         return this.#q.entries();
