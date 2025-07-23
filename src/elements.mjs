@@ -7,7 +7,7 @@ class UpgradeQueue {
     #scheduled = false;
     constructor() {
         document.addEventListener('DOMContentLoaded', async () => {
-            const pending = Array.from(this.entries).map(([child, promise ]) => promise);
+            const pending = Array.from(this.entries).map(([child, {promise, resolve}]) => promise);
             await Promise.all(pending);
             document.dispatchEvent(new CustomEvent('ftl:ready', {
                 bubbles: false,
@@ -170,8 +170,8 @@ class Rendering {
     }
     static async waitForChildren(el) {
         const pending = Array.from(registry.upgrades)
-            .filter(([child, promise]) => el !== child && el.contains(child))
-            .map(([child, promise]) => promise);
+            .filter(([child, {promise}]) => el !== child && el.contains(child))
+            .map(([child, {promise}]) => promise);
         await Promise.all(pending);
     }
 
