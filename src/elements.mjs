@@ -27,7 +27,8 @@ class UpgradeQueue {
             requestAnimationFrame(() => this.#dequeue("raf"));
         }
         let resolve;
-        const promise = new Promise((res, rej) => {resolve = res;})
+        const promise = new Promise((res) => {resolve = res;})
+            .then(() => Nodes.waitParsed(el))
             .then(() => el.upgrade())
             .finally(() => this.#q.delete(el));
         this.#q.set(el, { promise, resolve });
@@ -198,25 +199,12 @@ class ParsedElement extends HTMLElement {
         const { modules, data } = registry.context();
         return this.#bits().TEMPLATES[name ?? 'default'].withData(data).withModules(modules);
     }
-    connectedCallback() {
+    async connectedCallback() {
         if (this.#parsed) {
             return;
         }
-        if (this.ownerDocument.readyState === 'complete' || Nodes.isParsed(this)) {
-            this.#bits().enqueue(this);
-            return;
-        }
-        const ac = new AbortController();
-        const clearAndQueue = () => { ac.abort(); observer.disconnect(); this.#bits().enqueue(this); }
-        this.ownerDocument.addEventListener('DOMContentLoaded', clearAndQueue, { signal: ac.signal });
-        const observer = new MutationObserver(() => {
-            if (!Nodes.isParsed(this)) {
-                return;
-            }
-            clearAndQueue();
-        });
-        const parent = /** @type {Node} */ (this.parentNode);
-        observer.observe(parent, { childList: true });
+        //await Nodes.waitParsed(this);
+        this.#bits().enqueue(this);
     }
     attributeChangedCallback(attr, oldValue, newValue) {
         if (!this.#parsed || oldValue === newValue) {

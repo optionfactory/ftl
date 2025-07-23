@@ -156,6 +156,26 @@ class Nodes {
         }
         return false;
     }
+
+    static waitParsed(el){
+        if (el.ownerDocument.readyState === 'complete' || Nodes.isParsed(el)) {
+            return Promise.resolve(el);
+        }
+        return new Promise((resolve) => {
+            const ac = new AbortController();
+            const clearAndQueue = () => { ac.abort(); observer.disconnect(); resolve(el); }
+            el.ownerDocument.addEventListener('DOMContentLoaded', clearAndQueue, { signal: ac.signal });
+            const observer = new MutationObserver(() => {
+                if (!Nodes.isParsed(el)) {
+                    return;
+                }
+                clearAndQueue();
+            });
+            const parent = /** @type {Node} */ (el.parentNode);
+            observer.observe(parent, { childList: true });        
+        });
+    }
+
     /**
      * Returns the first child of the element element (if exists) matching the selector.
      * @param {Element} el 
@@ -185,6 +205,8 @@ class Nodes {
         }
         return r;
     }
+
+
 }
 
 
