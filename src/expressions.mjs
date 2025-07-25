@@ -82,8 +82,11 @@ class EvaluatingVisitor {
         return node.value.map(v => this.visit(v));
     }
     [nodes.ter](node) {
+        return this.visit(node.cond)? this.visit(node.ifTrue) : this.visit(node.ifFalse);
+    }
+    [nodes.elv](node) {
         const cond = this.visit(node.cond);
-        return cond ? (node.ifTrue ? this.visit(node.ifTrue) : cond) : this.visit(node.ifFalse);
+        return cond ? cond : this.visit(node.ifFalse);
     }
     [nodes.access](node) {
         let prev = undefined;

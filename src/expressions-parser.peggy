@@ -33,7 +33,7 @@ TernaryExpression
     / ElvisExpression
 
 ElvisExpression
-    = cond:NullCoalescingExpression _ "?:" _ ifFalse:ElvisExpression {return {type:nodes.ter, cond, ifFalse}; }
+    = cond:NullCoalescingExpression _ "?:" _ ifFalse:ElvisExpression {return {type:nodes.elv, cond, ifFalse}; }
     / NullCoalescingExpression
 
 NullCoalescingExpression

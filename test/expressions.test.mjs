@@ -26,7 +26,7 @@ describe('associativity', () => {
     ast("and is left-associative", "true && true && false", '{"type":"Symbol(and)","lhs":{"type":"Symbol(and)","lhs":{"type":"Symbol(literal)","value":true},"rhs":{"type":"Symbol(literal)","value":true}},"rhs":{"type":"Symbol(literal)","value":false}}');    
     ast("cmp is left-associative", "1 >= 2 > 3 < 4 <= 5", '{"type":"Symbol(cmp)","op":"<=","lhs":{"type":"Symbol(cmp)","op":"<","lhs":{"type":"Symbol(cmp)","op":">","lhs":{"type":"Symbol(cmp)","op":">=","lhs":{"type":"Symbol(literal)","value":1},"rhs":{"type":"Symbol(literal)","value":2}},"rhs":{"type":"Symbol(literal)","value":3}},"rhs":{"type":"Symbol(literal)","value":4}},"rhs":{"type":"Symbol(literal)","value":5}}');    
     ast("ternary is right-associative", "1 ? 2 : 3 ? 4 : 5", '{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":1},"ifTrue":{"type":"Symbol(literal)","value":2},"ifFalse":{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":3},"ifTrue":{"type":"Symbol(literal)","value":4},"ifFalse":{"type":"Symbol(literal)","value":5}}}');    
-    ast("elvis is right-associative", "1 ?: 2 ?: 3", '{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":1},"ifFalse":{"type":"Symbol(tenary)","cond":{"type":"Symbol(literal)","value":2},"ifFalse":{"type":"Symbol(literal)","value":3}}}');    
+    ast("elvis is right-associative", "1 ?: 2 ?: 3", '{"type":"Symbol(elvis)","cond":{"type":"Symbol(literal)","value":1},"ifFalse":{"type":"Symbol(elvis)","cond":{"type":"Symbol(literal)","value":2},"ifFalse":{"type":"Symbol(literal)","value":3}}}');    
     ast("null-coalescing is right-associative", "1 ?? 2 ?? 3", '{"type":"Symbol(null-coalescion)","lhs":{"type":"Symbol(literal)","value":1},"rhs":{"type":"Symbol(null-coalescion)","lhs":{"type":"Symbol(literal)","value":2},"rhs":{"type":"Symbol(literal)","value":3}}}');    
 
 });
@@ -46,8 +46,8 @@ describe('Expression', () => {
     verify('can navigate array', "a?.['b']", [{ a: null }], undefined);
     verify('can call function from data', "a()", [{ a: () => "M" }], "M");
     verify('can evaluate ternary operator', "a ? b : c", [{ a: false, b: "lhs", c: "rhs" }], "rhs");
-    verify('can evaluate ternary operator', "a ?: c", [{ a: false, b: "lhs", c: "rhs" }], "rhs");
-    verify('can evaluate ternary operator', "a ?: b", [{ a: 'lhs', b: "rhs" }], "lhs");
+    verify('can evaluate elvis operator', "a ?: c", [{ a: false, b: "lhs", c: "rhs" }], "rhs");
+    verify('can evaluate elvis operator', "a ?: b", [{ a: 'lhs', b: "rhs" }], "lhs");
     verify('can evaluate ??', "a ?? b", [{ a: "rhs", b: "lhs" }], "rhs");
     verify('can evaluate ??', "a ?? b", [{ a: undefined, b: "lhs" }], "lhs");
     verify('can evaluate ??', "a ?? b", [{ a: null, b: "lhs" }], "lhs");

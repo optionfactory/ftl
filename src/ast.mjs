@@ -1,5 +1,6 @@
 const nodes = {
     ter: Symbol("tenary"),
+    elv: Symbol("elvis"),
     nullc: Symbol("null-coalescion"),
     or: Symbol("or"),
     and: Symbol("and"),
