@@ -1,13 +1,12 @@
-import { Template } from "./template.mjs"
-import { Nodes, LightSlots } from "./dom.mjs";
-
+import { Nodes } from "./dom.mjs";
+import { Template } from "./template.mjs";
 
 class UpgradeQueue {
     #q = new Map();
     #scheduled = false;
     constructor() {
         document.addEventListener('DOMContentLoaded', async () => {
-            const pending = Array.from(this.entries).map(([child, {promise, resolve}]) => promise);
+            const pending = Array.from(this.entries).map(([child, { promise, resolve }]) => promise);
             await Promise.all(pending);
             document.dispatchEvent(new CustomEvent('ftl:ready', {
                 bubbles: false,
@@ -27,7 +26,7 @@ class UpgradeQueue {
             requestAnimationFrame(() => this.#dequeue("raf"));
         }
         let resolve;
-        const promise = new Promise((res) => {resolve = res;})
+        const promise = new Promise((res) => { resolve = res; })
             .then(() => Nodes.waitParsed(el))
             .then(() => el.upgrade())
             .finally(() => this.#q.delete(el));
@@ -143,108 +142,5 @@ class Registry {
 
 const registry = new Registry();
 
-class Templates {
-    static fromHtml(html) {
-        const { modules, data } = registry.context()
-        return Template.fromHtml(html, modules, ...data);
-    }
-    static fromSelector(selector) {
-        const { modules, data } = registry.context()
-        return Template.fromHtml(selector, modules, ...data);
-    }
-    static fromTemplate(templateEl) {
-        const { modules, data } = registry.context()
-        return Template.fromTemplate(templateEl, modules, ...data);
-    }
-    static fromFragment(fragment) {
-        const { modules, data } = registry.context()
-        return Template.fromFragment(fragment, modules, ...data);
-    }
-}
 
-class Rendering {
-    static async waitFor(el) {
-        const pending = Array.from(registry.upgrades)
-            .filter(([child, { promise }]) => el.contains(child))
-            .map(([child, { promise }]) => promise);
-        await Promise.all(pending);
-    }
-    static async waitForChildren(el) {
-        const pending = Array.from(registry.upgrades)
-            .filter(([child, {promise}]) => el !== child && el.contains(child))
-            .map(([child, {promise}]) => promise);
-        await Promise.all(pending);
-    }
-
-}
-
-class ParsedElement extends HTMLElement {
-    static BITS = {
-        enqueue: (el) => { },
-        SLOTS: false,
-        ATTR_TO_MAPPER: {},
-        /** @type [string, Function][] */
-        ATTRS_AND_MAPPERS: [],
-        TEMPLATES: {}
-    }
-    static get observedAttributes() {
-        return Object.keys(this.BITS.ATTR_TO_MAPPER);
-    }
-    #parsed = false;
-    #reflecting = false;
-    #bits() {
-        return /** @type {typeof ParsedElement} */(this.constructor).BITS;
-    }
-    template(name) {
-        const { modules, data } = registry.context();
-        return this.#bits().TEMPLATES[name ?? 'default'].withData(data).withModules(modules);
-    }
-    async connectedCallback() {
-        if (this.#parsed) {
-            return;
-        }
-        //await Nodes.waitParsed(this);
-        this.#bits().enqueue(this);
-    }
-    attributeChangedCallback(attr, oldValue, newValue) {
-        if (!this.#parsed || oldValue === newValue) {
-            return;
-        }
-        if (this.#reflecting) {
-            return;
-        }
-        const mapper = this.#bits().ATTR_TO_MAPPER[attr];
-        this[attr] = mapper(newValue, attr, this);
-    }
-    #disabledBeforeParsed = null;
-    formDisabledCallback(disabled) {
-        if (!this.#parsed) {
-            this.#disabledBeforeParsed = disabled;
-            return;
-        }
-        this.disabled = disabled;
-    }
-    async upgrade() {
-        if (this.#parsed) {
-            return;
-        }
-        this.#parsed = true;
-        const slots = this.#bits().SLOTS ? LightSlots.from(this) : undefined;
-        const observed = Object.fromEntries(this.#bits().ATTRS_AND_MAPPERS.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute), attribute, this)]));
-        const disabled = this.#disabledBeforeParsed ?? false
-        await this.render({ slots, observed, disabled });
-    }
-    render(c) {
-    }
-    reflect(fn) {
-        this.#reflecting = true;
-        try {
-            fn();
-        } finally {
-            this.#reflecting = false;
-        }
-    }
-}
-
-
-export { Registry, registry, Templates, Rendering, ParsedElement };
+export { Registry, registry }
