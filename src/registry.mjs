@@ -3,10 +3,9 @@ import { Template } from "./template.mjs";
 
 class UpgradeQueue {
     #q = new Map();
-    #scheduled = false;
     constructor() {
         document.addEventListener('DOMContentLoaded', async () => {
-            const pending = Array.from(this.entries).map(([child, { promise, resolve }]) => promise);
+            const pending = Array.from(this.entries).map(([child, promise ]) => promise);
             await Promise.all(pending);
             document.dispatchEvent(new CustomEvent('ftl:ready', {
                 bubbles: false,
@@ -20,23 +19,10 @@ class UpgradeQueue {
             //while it's already queued for upgrade (e.g.: ful-form)
             return;
         }
-        if (!this.#scheduled) {
-            //first in queue schedules the dequeing
-            this.#scheduled = true;
-            requestAnimationFrame(() => this.#dequeue("raf"));
-        }
-        let resolve;
-        const promise = new Promise((res) => { resolve = res; })
-            .then(() => Nodes.waitParsed(el))
+        const promise = Nodes.waitParsed(el)
             .then(() => el.upgrade())
             .finally(() => this.#q.delete(el));
-        this.#q.set(el, { promise, resolve });
-    }
-    #dequeue(source) {
-        this.#scheduled = false;
-        for (const [el, { resolve }] of this.#q) {
-            resolve();
-        }
+        this.#q.set(el, promise);
     }
     get entries() {
         return this.#q.entries();
