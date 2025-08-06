@@ -9,7 +9,7 @@ class Templates {
     }
     static fromSelector(selector) {
         const { modules, data } = registry.context()
-        return Template.fromHtml(selector, modules, ...data);
+        return Template.fromSelector(selector, modules, ...data);
     }
     static fromTemplate(templateEl) {
         const { modules, data } = registry.context()
