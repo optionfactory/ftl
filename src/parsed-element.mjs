@@ -20,13 +20,19 @@ class ParsedElement extends HTMLElement {
     }
     template(name) {
         const { modules, data } = registry.context();
-        return this.#bits().TEMPLATES[name ?? 'default'].withData(data).withModules(modules);
+        let t = this.#bits().TEMPLATES[name ?? 'default'].withData(data).withModules(modules);
+        for (let k of ['l10n', 'config']) {
+            const v = this.constructor[k];
+            if (v) {
+                t = t.withOverlay({ [k]: v });
+            }
+        }
+        return t;
     }
-    async connectedCallback() {
+    connectedCallback() {
         if (this.#parsed) {
             return;
         }
-        //await Nodes.waitParsed(this);
         this.#bits().enqueue(this);
     }
     attributeChangedCallback(attr, oldValue, newValue) {
