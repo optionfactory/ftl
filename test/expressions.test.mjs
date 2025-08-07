@@ -5,6 +5,11 @@ import { it, describe } from 'node:test';
 
 const modules = {
     one: () => 1,
+    l10n: {
+        t(k) {
+            return k;
+        }
+    },
     math: {
         isEven: (v) => v % 2 === 0
     },
@@ -64,6 +69,7 @@ describe('Expression', () => {
     verify('can evaluate self', "self", ["someValue"], "someValue");
     verify('can call a function', "#one()", [], 1)
     verify('can call a function in module', "#math:isEven(2)", [], true)
+    verify('modules can contain numbers', "#l10n:t('a')", [], 'a')
     verify('can reference data using this in a module function', "#accessData()", [{a:1}, {a:2}], 2)
     verify("can evaluate multiple !", "!!!!!!!!!!!a", [{ a: true }], false);
     verify("can use empty dict literal", "{}", [{}], {});

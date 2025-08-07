@@ -5,7 +5,7 @@ class UpgradeQueue {
     #q = new Map();
     constructor() {
         document.addEventListener('DOMContentLoaded', async () => {
-            const pending = Array.from(this.entries).map(([child, promise ]) => promise);
+            const pending = Array.from(this.entries).map(([child, promise]) => promise);
             await Promise.all(pending);
             document.dispatchEvent(new CustomEvent('ftl:ready', {
                 bubbles: false,

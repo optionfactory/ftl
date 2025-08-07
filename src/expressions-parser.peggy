@@ -161,13 +161,13 @@ DictLiteral "dict-literal"
     }
 
 ModuleFunction "module-function"
-    = '#' module:(@$[a-zA-Z$_]+ ':')? p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* {
-        return {type: nodes.function, module, value: p + s}
+    = '#' module:(@$([a-zA-Z$_][a-zA-Z$_0-9_]*) ':')? v:$([a-zA-Z$_][a-zA-Z$_0-9_]*) {
+        return {type: nodes.function, module, value: v}
     }
 
 Symbol "symbol"
-    = p:[a-zA-Z$_] s:$[a-zA-Z$_0-9_]* { 
-        return {type: nodes.symbol, value: p + s}; 
+    = s:$([a-zA-Z$_][a-zA-Z$_0-9_]*) { 
+        return {type: nodes.symbol, value: s}; 
     }
     
 EqualityOp
