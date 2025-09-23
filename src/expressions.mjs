@@ -93,7 +93,7 @@ class EvaluatingVisitor {
         let cur = this.visit(node.lhs);
         for (let i = 0; i !== node.rhs.length; ++i) {
             const rhs = node.rhs[i];
-            if (rhs.ns && (cur === null || cur === undefined)) {
+            if (rhs.ns && cur == null) {
                 return undefined;
             }
             let value = undefined;

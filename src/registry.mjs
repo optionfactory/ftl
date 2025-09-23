@@ -29,16 +29,80 @@ class UpgradeQueue {
     }
 }
 
+/**
+ * An attribute Mapper.
+ *
+ * @typedef {object} Mapper
+ * @property {function(string|null|undefined, string, Element): any} unmarshal
+ * @property {function(any, string, Element): (string|null)} marshal
+ */
+
 class Registry {
     #tagToClass = {};
     #configured = false;
     #mappers = {
-        'string': attr => attr,
-        'number': attr => attr === null ? null : Number(attr),
-        'presence': attr => attr !== null,
-        'bool': attr => attr === 'true',
-        'json': attr => attr === null ? null : JSON.parse(attr),
-        'csv': attr => attr === null ? [] : attr.split(",").map(e => e.trim()).filter(e => e)
+        'string': {
+            unmarshal(str, name, el) {
+                return str;
+            },
+            marshal(value, name, el) {
+                return value == null ? null : String(value);
+            }
+        },
+        'number': {
+            unmarshal(str, name, el) {
+                return str === null ? null : Number(str)
+            },
+            marshal(value, name, el) {
+                return value == null ? null : String(value);
+            }
+        },
+        'presence': {
+            unmarshal(str, name, el) {
+                return str !== null
+            },
+            marshal(value, name, el) {
+                return value == null ? null : '';
+            }
+        },
+        'bool': {
+            unmarshal(str, name, el) {
+                return str === 'true'
+            },
+            marshal(value, name, el) {
+                return value == null ? null : String(value === true);
+            }
+        },
+        'json': {
+            unmarshal(str, name, el) {
+                return str === null ? null : JSON.parse(str)
+            },
+            marshal(value, name, el) {
+                return value == null ? null : JSON.stringify(value);
+            }
+        },
+        'csv': {
+            unmarshal(str, name, el) {
+                return str === null ? [] : str.split(",").map(e => e.trim()).filter(e => e)
+            },
+            marshal(value, name, el) {
+                return value == null ? null : value.join(",")
+            }
+        },
+        "csvm": {
+            unmarshal(str, name, el) {
+                if (el.hasAttribute("multiple")) {
+                    return str === null ? [] : str.split(",").map(e => e.trim()).filter(e => e)
+                }
+                return str === null || str === '' ? null : str
+            },
+            marshal(value, name, el) {
+                if (el.hasAttribute("multiple")) {
+                    return value === null ? null : value.join(",")
+                }
+                return value == null ? null : String(value);
+            }
+        }
     };
     #components = {};
     #modules;
@@ -53,27 +117,26 @@ class Registry {
         return this;
     }
     #augmentAndDefineElement(tag, klass) {
-        const { observed, template, templates, slots, mappers } = klass;
-        const attrsAndTypes = (observed ?? []).map(a => {
+        const { observed, attributes, template, templates, slots, mappers } = klass;
+        const observedNames = (observed ?? []).map(a => a.split(":")[0]);
+        const attrToMapper = [...attributes ?? [], ...observed ?? []].reduce((acc, a) => {
             const [attr, maybeType] = a.split(":");
             const type = maybeType?.trim() ?? 'string';
             if (!(type in this.#mappers) && !(type in (mappers ?? {}))) {
                 throw new Error(`unsupported attribute type: ${type}`);
             }
-            return [attr.trim(), type];
-        });
+            acc[attr.trim()] = mappers?.[type] ?? this.#mappers[type];
+            return acc;
+        }, {});
 
-        const attrsAndMappers = attrsAndTypes.map(([attr, type]) => [attr, mappers?.[type] ?? this.#mappers[type]]);
-        const attrToMapper = Object.fromEntries(attrsAndMappers);
-
-        const namesAndTemplates = Object.entries(Object.assign({}, templates, { default: template }) ?? {}).map(([k, v]) => [k, Template.fromHtml(v)]);
+        const namesAndTemplates = Object.entries(Object.assign({}, templates, template ? { default: template } : {})).map(([k, v]) => [k, Template.fromHtml(v)]);
         const nameToTemplate = Object.fromEntries(namesAndTemplates);
 
         klass.BITS = {
             enqueue: (el) => this.#upgradeQueue.enqueue(el),
             SLOTS: slots,
+            OBSERVED: observedNames,
             ATTR_TO_MAPPER: attrToMapper,
-            ATTRS_AND_MAPPERS: attrsAndMappers,
             TEMPLATES: nameToTemplate
         }
         customElements.define(tag, klass);

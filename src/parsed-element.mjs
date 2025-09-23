@@ -1,22 +1,32 @@
-import { LightSlots } from "./dom.mjs";
+import { Attributes, LightSlots } from "./dom.mjs";
 import { registry } from "./registry.mjs";
+
+
+
+
 
 class ParsedElement extends HTMLElement {
     static BITS = {
         enqueue: (el) => { },
         SLOTS: false,
+        OBSERVED: [],
+        /** @type {Record<String, import("./registry.mjs").Mapper>} */
         ATTR_TO_MAPPER: {},
-        /** @type [string, Function][] */
-        ATTRS_AND_MAPPERS: [],
         TEMPLATES: {}
     }
     static get observedAttributes() {
-        return Object.keys(this.BITS.ATTR_TO_MAPPER);
+        return this.BITS.OBSERVED;
     }
     #parsed = false;
-    #reflecting = false;
+    #reflecting = 0;
     #bits() {
         return /** @type {typeof ParsedElement} */(this.constructor).BITS;
+    }
+    unmarshal(attr, str) {
+        return this.#bits().ATTR_TO_MAPPER[attr].unmarshal(str, attr, this);
+    }
+    marshal(attr, value) {
+        return this.#bits().ATTR_TO_MAPPER[attr].marshal(value, attr, this);
     }
     template(name) {
         const { modules, data } = registry.context();
@@ -39,11 +49,10 @@ class ParsedElement extends HTMLElement {
         if (!this.#parsed || oldValue === newValue) {
             return;
         }
-        if (this.#reflecting) {
+        if (this.#reflecting > 0) {
             return;
         }
-        const mapper = this.#bits().ATTR_TO_MAPPER[attr];
-        this[attr] = mapper(newValue, attr, this);
+        this[attr] = this.unmarshal(attr, newValue);
     }
     #disabledBeforeParsed = null;
     formDisabledCallback(disabled) {
@@ -59,20 +68,28 @@ class ParsedElement extends HTMLElement {
         }
         this.#parsed = true;
         const slots = this.#bits().SLOTS ? LightSlots.from(this) : undefined;
-        const observed = Object.fromEntries(this.#bits().ATTRS_AND_MAPPERS.map(([attribute, mapper]) => [attribute, mapper(this.getAttribute(attribute), attribute, this)]));
+        const observed = Object.fromEntries(this.#bits().OBSERVED.map(attribute => [attribute, this.unmarshal(attribute, this.getAttribute(attribute))]));
         const disabled = this.#disabledBeforeParsed ?? false
         await this.render({ slots, observed, disabled });
     }
     render(c) {
     }
     reflect(fn) {
-        this.#reflecting = true;
+        ++this.#reflecting;
         try {
             fn();
         } finally {
-            this.#reflecting = false;
+            --this.#reflecting;
         }
     }
+    reflectTo(attr, value) {
+        ++this.#reflecting;
+        try {
+            Attributes.set(this, attr, this.marshal(attr, value));
+        } finally {
+            --this.#reflecting;
+        }
+    }    
 }
 
 

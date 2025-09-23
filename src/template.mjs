@@ -99,13 +99,13 @@ class CommandsHandler {
     static tplText(node, expression, ops, modules, dataStack) {
         const text = Expressions.interpret(modules, dataStack, expression);
         const newNode = node.cloneNode();
-        newNode.replaceChildren(text === null || text === undefined ? "" : text);
+        newNode.replaceChildren(text == null ? "" : text);
         ops.replace(node, newNode);
     }
     static tplHtml(node, expression, ops, modules, dataStack) {
         const html = Expressions.interpret(modules, dataStack, expression);
         const newNode = node.cloneNode();
-        newNode.innerHTML = html === null || html === undefined ? "" : html;
+        newNode.innerHTML = html == null ? "" : html;
         ops.replace(node, newNode);
     }
     static tplClassAppend(node, expression, ops, modules, dataStack) {
@@ -125,7 +125,7 @@ class CommandsHandler {
     }
     static textNode(node, expression, ops, modules, dataStack) {
         for (const v of Expressions.interpret(modules, dataStack, expression, Expressions.MODE_TEMPLATED)) {
-            if (v.value === null || v.value === undefined) {
+            if (v.value == null) {
                 continue;
             }
             switch (v.type) {
@@ -269,7 +269,7 @@ class Template {
         try {
             const ops = new NodeOperations();
             const imported = document.importNode(this.#fragment, true);
-            const fragment = imported instanceof DocumentFragment ? imported : (() => {
+            const fragment = imported.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? imported : (() => {
                 const d = new DocumentFragment();
                 d.appendChild(imported);
                 return d;

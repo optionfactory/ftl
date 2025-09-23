@@ -109,6 +109,20 @@ class Attributes {
             el.setAttribute(attr, '');
         }
     }
+    /**
+     * Sets the value of an attribute. nullish values remove the attribute.
+     * @param {Element} el 
+     * @param {string} attr 
+     * @param {string | null | undefined} value 
+     */
+    static set(el, attr, value) {
+        if (value == null) {
+            el.removeAttribute(attr);
+        } else {
+            el.setAttribute(attr, value);
+        }
+    }
+
 
 }
 

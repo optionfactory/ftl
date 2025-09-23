@@ -1,6 +1,6 @@
 {
     "name": "@optionfactory/ftl",
-    "version": "4.0.4",
+    "version": "4.0.5-dev.0",
     "main": "dist/ftl.iife.js",
     "module": "dist/ftl.mjs",
     "exports": {
@@ -35,7 +35,7 @@
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
-        "jsdom": "^26.1.0",
+        "jsdom": "^27.0.0",
         "peggy": "^5.0.4"
     }
 }
