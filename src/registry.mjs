@@ -1,4 +1,5 @@
 import { Nodes } from "./dom.mjs";
+import { ExpressionEvaluator } from "./expressions.mjs";
 import { Template } from "./template.mjs";
 
 class UpgradeQueue {
@@ -183,6 +184,9 @@ class Registry {
     }
     context() {
         return { modules: this.#modules, data: this.#data };
+    }
+    evaluator(){
+        return new ExpressionEvaluator(this.#modules, this.#data);
     }
     component(name) {
         return this.#components[name];

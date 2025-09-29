@@ -174,5 +174,30 @@ class Expressions {
 
 }
 
+class ExpressionEvaluator {
+    #modules;
+    #dataStack;
+    constructor(modules, dataStack){
+        this.#modules = modules;
+        this.#dataStack = dataStack;
+    }
+    withModule(name, value){
+        const module = name ? { [name]: value } : value;
+        return new ExpressionEvaluator({ ...this.#modules, ...module }, this.#dataStack);
+    }
+    withOverlay(...data) {
+        return new ExpressionEvaluator(this.#modules, data.length === 0 ? this.#dataStack : [...this.#dataStack, ...data]);
+    }
+    evaluate(expression, mode) {
+        return Expressions.interpret(this.#modules,  this.#dataStack, expression, mode);
+    }
+    evaluateExpression(expression) {
+        return this.evaluate(expression, Expressions.MODE_EXPRESSION);
+    }
+    evaluateTemplated(expression) {
+        return this.evaluate(expression, Expressions.MODE_TEMPLATED);
+    }
 
-export { Expressions };
+}
+
+export { Expressions, ExpressionEvaluator };

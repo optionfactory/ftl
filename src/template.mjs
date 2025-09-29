@@ -1,6 +1,6 @@
 import { nodes } from "./ast.mjs";
 import { Attributes, Fragments } from "./dom.mjs";
-import { Expressions } from "./expressions.mjs";
+import { Expressions, ExpressionEvaluator } from "./expressions.mjs";
 
 class NodeOperations {
     #forRemoval;
@@ -138,6 +138,8 @@ class CommandsHandler {
     }
 }
 
+
+
 class Template {
     /**
      * Creates a template from a string.
@@ -257,10 +259,17 @@ class Template {
      * Evaluates an expression using the configured modules and data.
      * @param {string} expression
      * @param {(Expressions.MODE_EXPRESSION | Expressions.MODE_TEMPLATED)?} [mode]
+     * @param {...*} data
      */
-    evaluate(expression, mode) {
-        return Expressions.interpret(this.#modules, this.#dataStack, expression, mode);
+    evaluate(expression, mode, ...data) {
+        new ExpressionEvaluator(this.#modules, this.#dataStack).withOverlay(...data).evaluate(expression, mode);
     }
+    /**
+     * Returns an expression evaluator with bound modules and dataStack.
+     */
+    evaluator() {
+        return new ExpressionEvaluator(this.#modules, this.#dataStack);
+    }   
     /**
      * Renders the template.
      * @returns a DocumentFragment
