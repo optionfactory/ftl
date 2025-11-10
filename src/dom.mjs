@@ -128,19 +128,19 @@ class Attributes {
 
 class LightSlots {
     /**
-     * Extracts light slots from an element.
+     * Extracts light slots from an element. For non default slots in a template tag, the content is extracted.
      * @param {Element} el 
      * @returns the slots
      */
     static from(el) {
-        /** @type [string, Element][] */
+        /** @type [string, Element|DocumentFragment][] */
         const namedSlots = Array.from(el.children)
             .filter(el => el.matches('[slot]'))
             .map(el => {
                 el.remove();
                 const slot = el.getAttribute("slot");
                 el.removeAttribute("slot");
-                return [slot ?? 'unnamed', el];
+                return [slot ?? 'unnamed', el instanceof HTMLTemplateElement ? document.adoptNode(el.content) : el];
             });
         const slots = {};
         slots.default = new DocumentFragment();
