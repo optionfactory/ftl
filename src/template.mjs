@@ -1,6 +1,7 @@
 import { nodes } from "./ast.mjs";
 import { Attributes, Fragments } from "./dom.mjs";
 import { Expressions, ExpressionEvaluator } from "./expressions.mjs";
+import { effect } from "./signal.mjs";
 
 class NodeOperations {
     #forRemoval;
@@ -70,7 +71,7 @@ class CommandsHandler {
             ops.remove(node);
         }
     }
-    static tplVerbatim(node, expression, ops, modules, dataStack){
+    static tplVerbatim(node, expression, ops, modules, dataStack) {
         const newNode = node.cloneNode(true);
         ops.replace(node, newNode);
     }
@@ -79,11 +80,11 @@ class CommandsHandler {
             case 'tag':
                 const fragment = new DocumentFragment();
                 fragment.append(...node.childNodes);
-                if('tplVerbatim' in node.dataset){
+                if ('tplVerbatim' in node.dataset) {
                     //we are removing the parent element so we have to handle the lower priority commands
                     ops.popData(node, 'tplVerbatim');
                     ops.replace(node, fragment);
-                }else {
+                } else {
                     ops.append(node, fragment);
                     ops.remove(node);
                 }
@@ -139,7 +140,7 @@ class CommandsHandler {
 }
 
 
-
+const activeReactiveViews = new WeakMap();
 class Template {
     /**
      * Creates a template from a string.
@@ -208,14 +209,14 @@ class Template {
      * Creates a new Template replacing the modules and dataStack from a context.
      * @param {{modules: { [x: string]: any; } | null | undefined, data: any[]}} context
      */
-    withContext({modules, data}){
+    withContext({ modules, data }) {
         return new Template(this.#fragment, modules, data);
     }
     /**
      * Creates a new Template replacing the modules and dataStack from a registry.
      * @param any registry
      */
-    withContextFrom(registry){
+    withContextFrom(registry) {
         return this.withContext(registry.context());
     }
     /**
@@ -269,7 +270,7 @@ class Template {
      */
     evaluator() {
         return new ExpressionEvaluator(this.#modules, this.#dataStack);
-    }   
+    }
     /**
      * Renders the template.
      * @returns a DocumentFragment
@@ -307,8 +308,8 @@ class Template {
                         throw new RenderError(`Error evaluating command ${command}`, el, ex);
                     }
                 }
-                for(const dataSetKey of Object.keys(el.dataset || {})){
-                    if(!dataSetKey.startsWith('tpl')){
+                for (const dataSetKey of Object.keys(el.dataset || {})) {
+                    if (!dataSetKey.startsWith('tpl')) {
                         continue;
                     }
                     const attributeName = dataSetKey.substring('tpl'.length).split(/(?=[A-Z])/).join('-').toLowerCase();
@@ -366,6 +367,37 @@ class Template {
         if (el) {
             this.appendTo(el);
         }
+    }
+    /**
+     * Reactively renders this template on the Element (replacing children).
+     * Any signal read during rendering will automatically trigger a full re-render.
+     * You should use dispose when the rendered Element gets discarded to avoid memory leaks
+     * @param {Element} el
+     * @returns {{ dispose: () => void }}
+     */
+    renderReactiveTo(el) {
+        // Auto-clean any previous view on the same element
+        activeReactiveViews.get(el)?.dispose();
+        const dispose = effect(() => {
+            this.renderTo(el);
+        });
+        activeReactiveViews.set(el, { dispose });
+        return { dispose };
+    }
+    /**
+     * Reactively renders this template appending the resulting fragment to the first Element maching the selector, if exists.
+     * Any signal read during rendering will automatically trigger a full re-render.
+     * You should use dispose when the rendered Element gets discarded to avoid memory leaks
+     * @param {string} selector
+     * @returns {{ dispose: () => void }}
+     */
+    renderReactiveToSelector(selector) {
+        const el = document.querySelector(selector);
+        if (!el) {
+            console.warn(`ftl: selector "${selector}" not found`);
+            return { dispose: () => { } };
+        }
+        return this.renderReactiveTo(el);
     }
     static #NODE_FILTER(node) {
         if (node.nodeType === Node.TEXT_NODE) {

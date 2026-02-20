@@ -2,7 +2,7 @@ import "./mock-dom.mjs";
 import { Template, Fragments } from "../dist/ftl.mjs";
 import { strict as assert } from 'node:assert';
 import { it, describe } from 'node:test'; 
-
+import { Signal } from '../dist/ftl.mjs'
 
 const modules = {
     math: {
@@ -255,5 +255,26 @@ describe('Template', () => {
             assert.strictEqual(ex.message, expected);
         }
     });
-
+    it('template gets re-rendered if using signal data and renderReactiveTo', () => {
+        let data = new Signal([1, 2]);
+        const div = document.createElement('div');
+        let template = Template.fromHtml('<div data-tpl-each="self">{{self}}</div>', modules, data);
+        let {dispose} = template.renderReactiveTo(div);
+        assert.strictEqual(div.innerHTML, '<div>1</div><div>2</div>');
+        data.value = [1, 2, 3];
+        assert.strictEqual(div.innerHTML, '<div>1</div><div>2</div><div>3</div>');
+        dispose();
+    });
+    it('template gets re-rendered if using signal data and renderReactiveToSelector', () => {
+        let data = new Signal([1, 2]);
+        const div = document.createElement('div');
+        div.setAttribute('id', 'target');
+        document.body.appendChild(div);
+        let template = Template.fromHtml('<div data-tpl-each="self">{{self}}</div>', modules, data);
+        let {dispose} = template.renderReactiveToSelector('#target');
+        assert.strictEqual(div.innerHTML, '<div>1</div><div>2</div>');
+        data.value = [1, 2, 3];
+        assert.strictEqual(div.innerHTML, '<div>1</div><div>2</div><div>3</div>');
+        dispose();
+    });
 });

@@ -5,4 +5,4 @@ export { Registry, registry } from "./registry.mjs"
 export { Templates } from "./templates.mjs"
 export { Rendering } from "./rendering.mjs"
 export { ParsedElement } from './parsed-element.mjs'
-
+export { Signal, effect } from './signal.mjs';

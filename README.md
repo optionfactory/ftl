@@ -69,6 +69,26 @@ const template = ftl.Template.fromSelector('#my-template');
 const data = {title: 'Hello World!'};
 template.WithOverlay(data).renderToSelector('#target');
 ```
+- Render a **reactive** template
+You can use a Signal variable inside the template and render it using renderReactiveTo or renderReactiveToSelector to make the template reacto to value changes
+```javascript
+const data = new Signal(){title: 'Hello World!'};
+const title = template.WithOverlay(data).renderReactiveToSelector('#target');
+data.value = {title: 'I''m the new title!'};
+title.dispose() // ← call when the element is removed
+```
+**Important**: Always call dispose() (or let renderReactiveTo on the same element do it automatically) to prevent memory leaks.
+When using custom components call dispose() in the disconnectedCallback()
+```javascript
+class MyComp extends ftl.ParsedElement {
+  render() {
+    this.view = this.template.renderReactiveTo(this);
+  }
+  disconnectedCallback() {
+    this.view?.dispose(); // ← Called each time the element is removed from the document
+  }
+}
+```
 
 #### Attributes evaluation
 All attributes starting with `data-tpl-` are evaluated in the followind order: 

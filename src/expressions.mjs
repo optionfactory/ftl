@@ -1,6 +1,7 @@
 // @ts-ignore
 import { parse } from "./expressions-parser.peggy";
 import { nodes } from "./ast.mjs";
+import { Signal } from "./signal.mjs";
 
 class EvaluatingVisitor {
     #modules;
@@ -136,6 +137,13 @@ class EvaluatingVisitor {
     }
 }
 
+function unwrap(value) {
+  while (value instanceof Signal) {
+    value = value.value;
+  }
+  return value;
+}
+
 class Expressions {
     static MODE_EXPRESSION = Symbol("MODE_EXPRESSION");
     static MODE_TEMPLATED = Symbol("MODE_TEMPLATED");
@@ -169,7 +177,9 @@ class Expressions {
      * @returns the result
      */
     static interpret(modules, dataStack, expression, mode) {
-        return Expressions.evaluate(modules, dataStack, Expressions.parse(expression, mode), mode);
+        return unwrap(
+            Expressions.evaluate(modules, dataStack, Expressions.parse(expression, mode), mode)
+        );
     }
 
 }
