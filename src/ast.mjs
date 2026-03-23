@@ -12,6 +12,7 @@ const nodes = {
     subscript: Symbol("access-subscript"),
     method: Symbol("access-method-call"),
     call: Symbol("module-function-call"),
+    tstring: Symbol("tstring"),
     literal: Symbol("literal"),
     array: Symbol("array-literal"),
     dict: Symbol("dict-literal"),

@@ -143,6 +143,25 @@ NumberLiteral "number-literal"
 StringLiteral "string-literal"
     = "'" value:$[^']* "'"  { return {type: nodes.literal, value}; }
     / '"' value:$[^"]* '"'  { return {type: nodes.literal, value}; }
+    / "`" parts:(TemplateStringExpression / TemplateStringText)* "`" { 
+        return {type: nodes.tstring, parts}; 
+    }
+
+TemplateStringExpression "tstring-expression"
+    = "{" _ expr:Expression _ "}" { 
+        return expr; 
+    }
+
+TemplateStringLiteral "tstring-literal"
+    = parts:(
+        $([^\\`{]+)
+        / "\\" c:. { return c; }
+    )+ {
+        return { type: nodes.literal, value: parts.join('') };
+    }
+    / char:$("{") { 
+        return { type: nodes.literal, value: char }; 
+    }
 
 ArrayLiteral "array-literal" 
     = "[" _ h:(Expression)? _ t:("," _ @Expression _)* "]" { 

@@ -78,6 +78,8 @@ describe('Expression', () => {
     verify("can use array literal", "[1,2]", [{}], [1, 2]);
     verify("can use string literal", '"abc"', [{}], "abc");
     verify("can use string literal", "'abc'", [{}], "abc");
+    verify("can use tstring literal", '`abc`', [{}], "abc");
+    verify("can use tstring literal", '`abc{var}`', [{var: 'def'}], "abcdef");
     verify("can use number literal", "12.3", [{}], 12.3);
     verify("can use number literal", "-12.3", [{}], -12.3);
     verify("can use number literal", "-.3", [{}], -.3);

@@ -72,6 +72,17 @@ class EvaluatingVisitor {
     [nodes.literal](node) {
         return node.value;
     }
+    [nodes.tstring](node) {
+        let result = "";
+        const parts = node.parts;
+        for (let i = 0, len = parts.length; i < len; i++) {
+            const evaluated = this.visit(parts[i]);
+            if (evaluated !== null && evaluated !== undefined) {
+                result += evaluated; 
+            }
+        }
+        return result;
+    }    
     [nodes.symbol](node) {
         return this.#data[node.value];
     }
