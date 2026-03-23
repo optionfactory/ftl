@@ -143,7 +143,7 @@ NumberLiteral "number-literal"
 StringLiteral "string-literal"
     = "'" value:$[^']* "'"  { return {type: nodes.literal, value}; }
     / '"' value:$[^"]* '"'  { return {type: nodes.literal, value}; }
-    / "`" parts:(TemplateStringExpression / TemplateStringText)* "`" { 
+    / "`" parts:(TemplateStringExpression / TemplateStringLiteral)* "`" { 
         return {type: nodes.tstring, parts}; 
     }
 
