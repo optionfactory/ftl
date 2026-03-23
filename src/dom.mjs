@@ -6,7 +6,7 @@ class Fragments {
      */
     static fromHtml(...html) {
         const el = document.createElement("template");
-        el.innerHTML = html.join("");
+        el.innerHTML = html.map(h => h.trim()).join("");
         return document.adoptNode(el.content);
     }
     /**
@@ -138,9 +138,9 @@ class LightSlots {
             .filter(el => el.matches('[slot]'))
             .map(el => {
                 el.remove();
-                const slot = el.getAttribute("slot");
+                const slot = el.getAttribute("slot") || 'unnamed';
                 el.removeAttribute("slot");
-                return [slot ?? 'unnamed', el instanceof HTMLTemplateElement ? document.adoptNode(el.content) : el];
+                return [slot, LightSlots.slotFromNode(el)];
             });
         const slots = {};
         slots.default = new DocumentFragment();
@@ -152,6 +152,15 @@ class LightSlots {
             slots[name].append(el);
         }
         return slots;
+    }
+    static slotFromNode(el){
+        if(el instanceof HTMLTemplateElement){
+            return document.adoptNode(el.content);
+        }
+        if(el instanceof HTMLScriptElement && el.type !== '' && el.type !== 'text/javascript'){
+            return Fragments.fromHtml(el.innerHTML);
+        }
+        return el;
     }
 }
 
