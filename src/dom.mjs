@@ -20,6 +20,14 @@ class Fragments {
         return el.innerHTML;
     }
     /**
+     * Checks if a fragment contains only blank text nodes
+     * @param {DocumentFragment} fragment 
+     * @returns {boolean} true if the fragment is blank
+     */
+    static isBlank(fragment) {
+        return fragment.childElementCount === 0 && fragment.textContent.trim() === '';
+    }
+    /**
      * Creates a DocumentFragment from nodes.
      * @param  {...Node} nodes 
      * @returns {DocumentFragment} the fragment
@@ -153,11 +161,11 @@ class LightSlots {
         }
         return slots;
     }
-    static slotFromNode(el){
-        if(el instanceof HTMLTemplateElement){
+    static slotFromNode(el) {
+        if (el instanceof HTMLTemplateElement) {
             return document.adoptNode(el.content);
         }
-        if(el instanceof HTMLScriptElement && el.type !== '' && el.type !== 'text/javascript'){
+        if (el instanceof HTMLScriptElement && el.type !== '' && el.type !== 'text/javascript') {
             return Fragments.fromHtml(el.innerHTML);
         }
         return el;
@@ -180,7 +188,7 @@ class Nodes {
         return false;
     }
 
-    static waitParsed(el){
+    static waitParsed(el) {
         if (el.ownerDocument.readyState === 'complete' || Nodes.isParsed(el)) {
             return Promise.resolve(el);
         }
@@ -195,7 +203,7 @@ class Nodes {
                 clearAndQueue();
             });
             const parent = /** @type {Node} */ (el.parentNode);
-            observer.observe(parent, { childList: true });        
+            observer.observe(parent, { childList: true });
         });
     }
 
