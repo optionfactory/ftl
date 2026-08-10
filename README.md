@@ -1,6 +1,10 @@
-# FTL
-A no-build templating and web components library.
+# Moved
 
+This project is archived and has been merged into [`@optionfactory/fml`](https://github.com/optionfactory/fml)
+
+
+## FTL
+A no-build templating and web components library.
 
 ## Documentation
 
